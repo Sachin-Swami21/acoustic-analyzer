@@ -148,7 +148,7 @@ inserted** (it holds the boot partition on this method).
 `git clone` from a repo, or `scp` over the network from your Mac:
 ```bash
 # from your Mac:
-scp -r /Users/chamiv/acoustic-analyzer  <jetson-user>@<jetson-ip>:~/
+scp -r ./acoustic-analyzer  <jetson-user>@<jetson-ip>:~/
 ```
 
 ---

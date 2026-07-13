@@ -189,7 +189,7 @@
 <div class="wrap">
 
   <header class="hero">
-    <span class="eyebrow">Edge-AI · Signal processing · a father–son build</span>
+    <span class="eyebrow">Edge-AI · Signal processing · a hands-on build</span>
     <h1>Acoustic&nbsp;Analyzer</h1>
     <p class="lede">A local edge-AI that listens through a soldered microphone and explains what
       it hears — running entirely on an NVIDIA Jetson. No cloud, and no raw audio ever leaves
@@ -225,15 +225,14 @@
       <span style="color:var(--text)">structured facts</span>, and the LLM reasons over those. That keeps the
       model small, the device offline, and the reasoning grounded in real measurements.</p>
     <div class="grid g3" style="margin-top:26px">
-      <div class="card"><h3>Hear</h3><p>An electret mic + MAX9814 preamp your son solders feeds
+      <div class="card"><h3>Hear</h3><p>An electret mic + MAX9814 preamp you solder feeds
         clean audio to the Jetson over a USB sound card.</p></div>
       <div class="card"><h3>Distill</h3><p><span class="p" style="color:var(--accent)">features.analyze()</span>
         extracts dominant frequency, tonal peaks, band energy, a 60 Hz hum score, and a heuristic label — as JSON.</p></div>
       <div class="card"><h3>Explain</h3><p>The local model calls that as a tool, then answers in plain
         language: <em>“that's 60 Hz mains hum — likely a ground loop.”</em></p></div>
     </div>
-    <p class="muted" style="margin-top:22px;font-size:.92rem">Origin: a soldering project for a
-      3rd-year EE student, paired with a Jetson and a local LLM. It began as generic sensors, then
+    <p class="muted" style="margin-top:22px;font-size:.92rem">Origin: a soldering project paired with a Jetson and a local LLM. It began as generic sensors, then
       pivoted to signal processing — where the GPU earns its keep and the soldering moves to a
       meaningful analog front-end.</p>
   </section>
@@ -246,7 +245,7 @@
         <h3>Sound → clean audio</h3>
         <ul><li>Electret mic capsule</li><li>MAX9814 AGC preamp</li><li>Anti-alias RC filter</li>
           <li>3.5 mm jack → USB card</li></ul>
-        <div class="owner">Son solders</div>
+        <div class="owner">Hardware</div>
       </div>
       <div class="arrow">→</div>
       <div class="stage">
@@ -254,7 +253,7 @@
         <h3>Audio → facts → answer</h3>
         <ul><li>capture_test · spectrogram</li><li>features.analyze() → JSON</li>
           <li>Ollama · qwen2.5:3b</li><li>tool-calling agent</li></ul>
-        <div class="owner">You code</div>
+        <div class="owner">Software</div>
       </div>
       <div class="arrow">→</div>
       <div class="stage">

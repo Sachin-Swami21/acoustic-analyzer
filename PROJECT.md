@@ -1,13 +1,11 @@
 # Acoustic Analyzer
 
-A local, edge-AI project that **"hears" sound and explains it** — built as a hands-on
-soldering + signal-processing + local-LLM project for a 3rd-year EE student, with a
-Jetson doing the compute.
+A local, edge-AI project that **"hears" sound and explains it** — a hands-on
+soldering + signal-processing + local-LLM build, with a Jetson doing the compute.
 
-> **Why this exists:** the goal is a capstone-style build that combines three real EE/CE
-> skills — **hardware (soldering the analog front-end)**, **edge computing (Jetson)**, and
-> **AI (a local LLM + chat UI)**. The son (learning to solder, light on code) owns the
-> hardware; the strong-coder parent backs the software.
+> **Why this exists:** a capstone-style project combining three real EE/CE skills —
+> **hardware (soldering the analog front-end)**, **edge computing (Jetson)**, and
+> **AI (a local LLM + chat UI)**.
 
 📐 **Diagram:** [`acoustic-analyzer.drawio`](acoustic-analyzer.drawio) — open in
 [draw.io](https://app.diagrams.net) or the VS Code *Draw.io Integration* extension.
@@ -19,7 +17,7 @@ Page 1 = system architecture; Page 2 = options considered.
 
 ```
 ①  ANALOG FRONT-END              ②  JETSON ORIN NANO                 ③  CHAT UI
-   (son solders)                    (you code · Mac-first)              (browser)
+   (solder / hardware)              (code · Mac-first)                  (browser)
 
   Electret mic                     Stage 1  capture_test.py           Open WebUI
       │                                │  record · VU meter               ▲
@@ -71,7 +69,7 @@ upgrade).
 
 ## Soldering work (the hardware build)
 
-This is the son's part of the project. It is **hand-soldered, through-hole assembly on
+This is the hardware part of the project. It is **hand-soldered, through-hole assembly on
 perfboard** — the classic entry-level-but-real analog electronics soldering. No
 surface-mount (SMD), no reflow, no fine-pitch. Forgiving enough to learn on, but a genuine
 analog front-end, not just practice joints. Beginner-to-moderate difficulty and low-stakes:
@@ -85,7 +83,7 @@ soldered**, it just receives clean USB audio.
    feed solder, get a shiny cone. Easy to spot and redo a bad joint.
 2. **Component soldering — the anti-alias RC filter (the real lesson)** — solder a resistor
    and a capacitor onto perfboard to form the low-pass filter. This *is* the anti-aliasing
-   filter, the physical embodiment of the Nyquist/sampling lesson — he's soldering a concept.
+   filter, the physical embodiment of the Nyquist/sampling lesson — soldering a concept, not just parts.
 3. **Point-to-point perfboard wiring (the assembly)** — perfboard has no traces, so the
    connections are made with soldered jumper wires / pad bridges on the underside. Route:
    mic → MAX9814 → filter → 3.5 mm jack, plus VCC/GND rails. The closest thing to building
@@ -208,14 +206,14 @@ On the **Jetson later**, skip #10 — power from the Jetson's **5 V pin** on the
 
 ## Staged roadmap
 
-| Stage | Who | What | Status |
-|-------|-----|------|--------|
-| 1 | son + you | Solder mic→MAX9814→filter→jack; verify capture | 🟢 code done ([capture_test.py](capture_test.py)) |
-| 2 | you | FFT + live spectrogram | 🟢 code done ([spectrogram.py](spectrogram.py)) |
-| 3 | you | Feature extractor → structured JSON | 🟢 code done ([features.py](features.py)) |
-| 4 | you | Local LLM agent (Ollama + `qwen2.5:3b`) with tool-calling | 🟢 code done ([agent.py](agent.py)) |
-| 5 | you | Wrap `features.analyze()` as LLM **tools** | 🟢 code done ([acoustic_tools.py](acoustic_tools.py)) |
-| 6 | son + you | Enclosure + small log-mel CNN sound classifier | 🔴 stretch |
+| Stage | Track | What | Status |
+|-------|-------|------|--------|
+| 1 | hardware | Solder mic→MAX9814→filter→jack; verify capture | 🟢 code done ([capture_test.py](capture_test.py)) |
+| 2 | software | FFT + live spectrogram | 🟢 code done ([spectrogram.py](spectrogram.py)) |
+| 3 | software | Feature extractor → structured JSON | 🟢 code done ([features.py](features.py)) |
+| 4 | software | Local LLM agent (Ollama + `qwen2.5:3b`) with tool-calling | 🟢 code done ([agent.py](agent.py)) |
+| 5 | software | Wrap `features.analyze()` as LLM **tools** | 🟢 code done ([acoustic_tools.py](acoustic_tools.py)) |
+| 6 | hardware | Enclosure + small log-mel CNN sound classifier | 🔴 stretch |
 
 **Built Stage-5 tools:** `capture_and_analyze()`, `get_spectrum_image()`, `list_input_devices()`.
 Verified end-to-end: `qwen2.5:3b` autonomously calls the tools and interprets the JSON facts.
@@ -230,7 +228,7 @@ Ollama installed with `qwen2.5:3b` pulled). The identical files run on the Jetso
 only change is `--device N` to select the USB audio adapter.
 
 ```bash
-cd /Users/chamiv/acoustic-analyzer
+cd acoustic-analyzer
 ./.venv/bin/python capture_test.py            # talk — watch the level meter
 ./.venv/bin/python spectrogram.py             # whistle — watch the spectrogram climb
 ./.venv/bin/python features.py --seconds 2    # make a sound — see the JSON facts
@@ -258,11 +256,11 @@ Fun extensions floated for the project (parked for later):
 
 - **① iPhone Shortcut → tap sticker → trigger the Jetson** ⭐ *(highest wow, ~$0.30, no app code)*
   Stick a cheap NFC tag on the enclosure. iOS **Shortcuts → Automation → NFC → Get Contents
-  of URL** hits the Jetson's HTTP endpoint. Son taps his iPhone on the device → Jetson records
+  of URL** hits the Jetson's HTTP endpoint. Tap the iPhone on the device → Jetson records
   + analyzes → phone shows/speaks *"60 Hz mains hum detected."* Needs only the HTTP endpoint
   (see "Next up" #1) — no Xcode, no app.
 - **② PN532 NFC reader on the Jetson** ⭐ *(the real EE/soldering extension)*
-  Son solders a **PN532 module** (~$5, I2C/SPI/UART) to the Jetson. Physical NFC tokens become
+  Solder a **PN532 module** (~$5, I2C/SPI/UART) to the Jetson. Physical NFC tokens become
   commands: tap a "record" card → capture; "hum test" card → run a profile; "show spectrum"
   card → render the image. Teaches embedded buses (I2C); the same tags the iPhone can also read.
 - **③ Tag → opens the live dashboard on the iPhone** *(simplest)*
@@ -270,7 +268,7 @@ Fun extensions floated for the project (parked for later):
   acoustic dashboard. Zero coding.
 
 ### Other cool directions (acoustic / EE)
-- **Sound-reactive OLED / LED bar** he solders — live VU meter or spectrum on an SSD1306 OLED.
+- **Sound-reactive OLED / LED bar** to solder — live VU meter or spectrum on an SSD1306 OLED.
 - **Direction finding** with two mics — TDOA/beamforming to point at a sound source (real DSP).
 - **Local wake-word / voice** to talk to the agent hands-free.
 - **"Shazam for household sounds"** — the Stage-6 classifier naming appliances, alarms, etc.

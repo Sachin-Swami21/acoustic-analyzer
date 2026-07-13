@@ -3,6 +3,7 @@
 How to get the software running: **Ollama + a local model**, the **Python environment**, and
 the **agent**. Works the same on your Mac (dev) and on the Jetson (deploy).
 
+- Test the soldered board on a Mac/Windows PC (no Jetson) → [TEST-HARDWARE.md](TEST-HARDWARE.md)
 - Hardware / Jetson bootstrapping → [JETSON-SETUP.md](JETSON-SETUP.md)
 - What the project is / the design → [PROJECT.md](PROJECT.md)
 
@@ -54,7 +55,7 @@ ollama run qwen2.5:3b "hello"                    # should reply
 From the project folder:
 
 ```bash
-cd ~/acoustic-analyzer                 # or /Users/chamiv/acoustic-analyzer on the Mac
+cd acoustic-analyzer                   # the project folder
 
 python3 -m venv .venv                  # create an isolated environment
 ./.venv/bin/pip install --upgrade pip
