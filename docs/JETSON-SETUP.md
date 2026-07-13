@@ -139,8 +139,8 @@ inserted** (it holds the boot partition on this method).
    sudo apt install -y python3-venv portaudio19-dev libsndfile1   # sounddevice needs PortAudio
    cd ~/acoustic-analyzer
    python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
-   ./.venv/bin/python capture_test.py --list      # find the USB adapter's index N
-   ./.venv/bin/python agent.py                     # "what's that noise?"
+   ./.venv/bin/python src/capture_test.py --list      # find the USB adapter's index N
+   ./.venv/bin/python src/agent.py                     # "what's that noise?"
    ```
    The code is identical to the Mac — you just pass `--device N` for the USB card.
 
@@ -159,7 +159,7 @@ scp -r ./acoustic-analyzer  <jetson-user>@<jetson-ip>:~/
 - `df -h /` → root is on `/dev/nvme0n1p1`.
 - `ollama run qwen2.5:3b "hello"` → responds; `jtop` shows a GPU spike.
 - `arecord -l` → USB audio adapter listed.
-- `./.venv/bin/python agent.py` → tool fires, it explains a sound.
+- `./.venv/bin/python src/agent.py` → tool fires, it explains a sound.
 
 ---
 

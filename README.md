@@ -8,7 +8,7 @@ Runs entirely on an NVIDIA Jetson — no cloud, and no raw audio ever leaves the
 
 </div>
 
-![Acoustic Analyzer architecture](acoustic-analyzer.svg)
+![Acoustic Analyzer architecture](docs/acoustic-analyzer.svg)
 
 ---
 
@@ -70,40 +70,40 @@ python3 -m venv .venv
 ./.venv/bin/pip install -r requirements.txt
 
 # 3. Run the agent
-./.venv/bin/python agent.py
+./.venv/bin/python src/agent.py
 #    you> what's that noise?
 #    you> show me the spectrum        (saves spectrum.png)
 ```
 
-Full walkthrough and troubleshooting → **[SETUP.md](SETUP.md)**.
+Full walkthrough and troubleshooting → **[docs/SETUP.md](docs/SETUP.md)**.
 
 ## Testing the soldered hardware (no Jetson needed)
 
 The front-end presents as a standard **USB microphone**, so you can verify your soldering on a
 **Mac or Windows PC** — plug in the USB audio adapter and run the capture tests. Clear,
 OS-by-OS instructions (including the Windows/WSL caveats) are in
-**[TEST-HARDWARE.md](TEST-HARDWARE.md)**.
+**[docs/TEST-HARDWARE.md](docs/TEST-HARDWARE.md)**.
 
 ## Repository layout
 
 | File | Purpose |
 |------|---------|
-| [`capture_test.py`](capture_test.py) | Prove the mic works — level meter, record, device list |
-| [`spectrogram.py`](spectrogram.py) | Live scrolling FFT spectrogram |
-| [`features.py`](features.py) | `analyze()` — turns audio into structured JSON facts |
-| [`acoustic_tools.py`](acoustic_tools.py) | LLM tools: `capture_and_analyze`, `get_spectrum_image`, `list_input_devices` |
-| [`agent.py`](agent.py) | Terminal chat — local LLM (Ollama) that calls the tools |
+| [`src/capture_test.py`](src/capture_test.py) | Prove the mic works — level meter, record, device list |
+| [`src/spectrogram.py`](src/spectrogram.py) | Live scrolling FFT spectrogram |
+| [`src/features.py`](src/features.py) | `analyze()` — turns audio into structured JSON facts |
+| [`src/acoustic_tools.py`](src/acoustic_tools.py) | LLM tools: `capture_and_analyze`, `get_spectrum_image`, `list_input_devices` |
+| [`src/agent.py`](src/agent.py) | Terminal chat — local LLM (Ollama) that calls the tools |
 | [`requirements.txt`](requirements.txt) | Python dependencies |
 
 ## Documentation
 
 | Doc | Contents |
 |-----|----------|
-| [SETUP.md](SETUP.md) | Install Ollama + the Python env, run the agent |
-| [TEST-HARDWARE.md](TEST-HARDWARE.md) | Test the soldered board on a Mac or Windows PC |
-| [JETSON-SETUP.md](JETSON-SETUP.md) | Bootstrap the Jetson Orin Nano (Apple-Silicon-friendly) |
-| [PROJECT.md](PROJECT.md) | Full design, BOM, roadmap, and future ideas |
-| [acoustic-wiring.svg](acoustic-wiring.svg) | Pin-level solder map + checklist |
+| [docs/SETUP.md](docs/SETUP.md) | Install Ollama + the Python env, run the agent |
+| [docs/TEST-HARDWARE.md](docs/TEST-HARDWARE.md) | Test the soldered board on a Mac or Windows PC |
+| [docs/JETSON-SETUP.md](docs/JETSON-SETUP.md) | Bootstrap the Jetson Orin Nano (Apple-Silicon-friendly) |
+| [docs/PROJECT.md](docs/PROJECT.md) | Full design, BOM, roadmap, and future ideas |
+| [docs/acoustic-wiring.svg](docs/acoustic-wiring.svg) | Pin-level solder map + checklist |
 
 ## Roadmap
 
@@ -119,8 +119,8 @@ OS-by-OS instructions (including the Windows/WSL caveats) are in
 
 A ~$25 analog front-end you solder:
 **electret mic → MAX9814 preamp → anti-alias RC filter → 3.5 mm jack → USB audio adapter → Jetson.**
-The [wiring map](acoustic-wiring.svg), bill of materials, and soldering steps are in
-[PROJECT.md](PROJECT.md).
+The [wiring map](docs/acoustic-wiring.svg), bill of materials, and soldering steps are in
+[docs/PROJECT.md](docs/PROJECT.md).
 
 ---
 

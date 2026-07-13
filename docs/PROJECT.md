@@ -19,9 +19,9 @@ Page 1 = system architecture; Page 2 = options considered.
 ①  ANALOG FRONT-END              ②  JETSON ORIN NANO                 ③  CHAT UI
    (solder / hardware)              (code · Mac-first)                  (browser)
 
-  Electret mic                     Stage 1  capture_test.py           Open WebUI
+  Electret mic                     Stage 1  src/capture_test.py           Open WebUI
       │                                │  record · VU meter               ▲
-  MAX9814 preamp                   Stage 2  spectrogram.py               │ chat +
+  MAX9814 preamp                   Stage 2  src/spectrogram.py               │ chat +
       │                                │  live FFT spectrogram            │ tool calls
   Anti-alias RC filter             Stage 3  features.analyze() ──────────┘
       │                                │      → JSON facts
@@ -184,7 +184,7 @@ On the **Jetson later**, skip #10 — power from the Jetson's **5 V pin** on the
    (probe with a multimeter or scope).
 2. Solder the **1 µF DC-block**, then the **R + C** filter onto perfboard.
 3. Wire the **3.5 mm jack** (tip = signal, sleeve = GND); plug into the USB adapter's line-in.
-4. Run `capture_test.py --list` to find the adapter, then `capture_test.py --device N` and
+4. Run `src/capture_test.py --list` to find the adapter, then `src/capture_test.py --device N` and
    watch the level meter move — that's the soldered board proven end-to-end.
 
 > Build this **in parallel** with the software: the code already runs on the Mac's built-in
@@ -208,11 +208,11 @@ On the **Jetson later**, skip #10 — power from the Jetson's **5 V pin** on the
 
 | Stage | Track | What | Status |
 |-------|-------|------|--------|
-| 1 | hardware | Solder mic→MAX9814→filter→jack; verify capture | 🟢 code done ([capture_test.py](capture_test.py)) |
-| 2 | software | FFT + live spectrogram | 🟢 code done ([spectrogram.py](spectrogram.py)) |
-| 3 | software | Feature extractor → structured JSON | 🟢 code done ([features.py](features.py)) |
-| 4 | software | Local LLM agent (Ollama + `qwen2.5:3b`) with tool-calling | 🟢 code done ([agent.py](agent.py)) |
-| 5 | software | Wrap `features.analyze()` as LLM **tools** | 🟢 code done ([acoustic_tools.py](acoustic_tools.py)) |
+| 1 | hardware | Solder mic→MAX9814→filter→jack; verify capture | 🟢 code done ([src/capture_test.py](../src/capture_test.py)) |
+| 2 | software | FFT + live spectrogram | 🟢 code done ([src/spectrogram.py](../src/spectrogram.py)) |
+| 3 | software | Feature extractor → structured JSON | 🟢 code done ([src/features.py](../src/features.py)) |
+| 4 | software | Local LLM agent (Ollama + `qwen2.5:3b`) with tool-calling | 🟢 code done ([src/agent.py](../src/agent.py)) |
+| 5 | software | Wrap `features.analyze()` as LLM **tools** | 🟢 code done ([src/acoustic_tools.py](../src/acoustic_tools.py)) |
 | 6 | hardware | Enclosure + small log-mel CNN sound classifier | 🔴 stretch |
 
 **Built Stage-5 tools:** `capture_and_analyze()`, `get_spectrum_image()`, `list_input_devices()`.
@@ -229,10 +229,10 @@ only change is `--device N` to select the USB audio adapter.
 
 ```bash
 cd acoustic-analyzer
-./.venv/bin/python capture_test.py            # talk — watch the level meter
-./.venv/bin/python spectrogram.py             # whistle — watch the spectrogram climb
-./.venv/bin/python features.py --seconds 2    # make a sound — see the JSON facts
-./.venv/bin/python agent.py                   # chat: "what's that noise?" / "show me the spectrum"
+./.venv/bin/python src/capture_test.py            # talk — watch the level meter
+./.venv/bin/python src/spectrogram.py             # whistle — watch the spectrogram climb
+./.venv/bin/python src/features.py --seconds 2    # make a sound — see the JSON facts
+./.venv/bin/python src/agent.py                   # chat: "what's that noise?" / "show me the spectrum"
 ```
 
 **Next up (in priority order):**

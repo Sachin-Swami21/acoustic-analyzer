@@ -20,7 +20,7 @@ After plugging in the board and running the tests, you should see:
 1. The USB adapter **listed** as an input device.
 2. The **level meter moves** when you tap the mic or talk → mic + amp + wiring + jack all good.
 3. The **spectrogram** shows a rising line when you whistle a rising note.
-4. `features.py` prints JSON with a sensible **dominant frequency** and, near a power brick, a
+4. `src/features.py` prints JSON with a sensible **dominant frequency** and, near a power brick, a
    high **60 Hz hum score**.
 
 If all four pass, the soldering is correct. If not, jump to **Troubleshooting**.
@@ -48,17 +48,17 @@ python3 -m venv .venv
 ./.venv/bin/pip install -r requirements.txt
 
 # 2. Find your USB adapter in the device list
-./.venv/bin/python capture_test.py --list
+./.venv/bin/python src/capture_test.py --list
 #    → note the index number next to your USB audio adapter (e.g. 2)
 
 # 3. Live level meter — TAP THE MIC / TALK, the bar should move
-./.venv/bin/python capture_test.py --device 2
+./.venv/bin/python src/capture_test.py --device 2
 
 # 4. Live spectrogram — whistle a rising note, watch the line climb
-./.venv/bin/python spectrogram.py --device 2
+./.venv/bin/python src/spectrogram.py --device 2
 
 # 5. Structured facts — make a sound, read the JSON (dominant Hz, hum score...)
-./.venv/bin/python features.py --device 2 --seconds 2
+./.venv/bin/python src/features.py --device 2 --seconds 2
 ```
 
 - **First run:** macOS asks for **microphone permission** for your terminal — click **Allow**,
@@ -82,17 +82,17 @@ py -m venv .venv
 .\.venv\Scripts\python -m pip install -r requirements.txt
 
 # 2. Find your USB adapter in the device list
-.\.venv\Scripts\python capture_test.py --list
+.\.venv\Scripts\python src/capture_test.py --list
 #    → note the index number next to your USB audio adapter
 
 # 3. Live level meter — TAP THE MIC / TALK, the bar should move
-.\.venv\Scripts\python capture_test.py --device 2
+.\.venv\Scripts\python src/capture_test.py --device 2
 
 # 4. Live spectrogram — whistle a rising note
-.\.venv\Scripts\python spectrogram.py --device 2
+.\.venv\Scripts\python src/spectrogram.py --device 2
 
 # 5. Structured facts
-.\.venv\Scripts\python features.py --device 2 --seconds 2
+.\.venv\Scripts\python src/features.py --device 2 --seconds 2
 ```
 
 **Windows specifics:**
@@ -129,8 +129,8 @@ arecord -l                                 # should list the USB capture device
 cd acoustic-analyzer
 python3 -m venv .venv
 ./.venv/bin/pip install -r requirements.txt
-./.venv/bin/python capture_test.py --list
-./.venv/bin/python capture_test.py --device <N>
+./.venv/bin/python src/capture_test.py --list
+./.venv/bin/python src/capture_test.py --device <N>
 ```
 
 > If `arecord -l` shows nothing or capture is silent, the audio bridge isn't cooperating —
@@ -145,7 +145,7 @@ python3 -m venv .venv
 | `--list` shows the adapter | USB adapter + cable OK | adapter not seated / wrong USB port |
 | Level meter moves on sound | mic → MAX9814 → filter → jack → adapter all wired right | power to MAX9814, solder joints, jack tip/sleeve |
 | Spectrogram line tracks a whistle | frequency response intact | anti-alias filter values, cold joints |
-| `features.py` hum score high near a power brick | full analysis chain OK | grounding, shielding |
+| `src/features.py` hum score high near a power brick | full analysis chain OK | grounding, shielding |
 
 ---
 
