@@ -98,6 +98,10 @@ shorts, continuity-checking with a multimeter).
 
 ### Circuit / wiring diagram
 
+📐 **Visual solder map:** [`acoustic-wiring.svg`](acoustic-wiring.svg) — pin-level connections
+plus an 8-step solder checklist, print-friendly. ASCII version below.
+
+
 ```
  ELECTRET MIC        MAX9814 module            ANTI-ALIAS RC LOW-PASS        3.5 mm JACK      USB AUDIO
    capsule       (AGC preamp, gain select)      + DC-block cap                 (TRS)          adapter
