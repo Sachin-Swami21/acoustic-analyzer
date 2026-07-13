@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Electron" modified="2026-07-10T18:00:00.000Z" agent="acoustic-analyzer" version="21.6.5" type="device">
+  <diagram name="System Architecture" id="arch-page">
+    <mxGraphModel dx="1024" dy="768" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="Acoustic Analyzer - a local edge-AI that hears and explains sound" style="text;html=1;align=center;fontSize=18;fontStyle=1;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="890" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="Jetson Orin Nano + Ollama qwen2.5:3b + Open WebUI -- the LLM never sees raw audio, only the JSON facts from features.analyze()" style="text;html=1;align=center;fontSize=12;fontStyle=2;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="58" width="890" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="zoneA" value="1. ANALOG FRONT-END&#10;(your son solders)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#B3B3B3;dashed=1;verticalAlign=top;fontStyle=1;fontSize=13;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="95" width="250" height="480" as="geometry" />
+        </mxCell>
+        <mxCell id="zoneB" value="2. JETSON ORIN NANO - DSP + LLM&#10;(you code, prototype on the Mac first)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#B3B3B3;dashed=1;verticalAlign=top;fontStyle=1;fontSize=13;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="320" y="95" width="330" height="480" as="geometry" />
+        </mxCell>
+        <mxCell id="zoneC" value="3. CHAT UI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#B3B3B3;dashed=1;verticalAlign=top;fontStyle=1;fontSize=13;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="680" y="95" width="250" height="480" as="geometry" />
+        </mxCell>
+        <mxCell id="mic" value="Electret mic capsule" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="85" y="150" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="preamp" value="MAX9814 AGC preamp&#10;(gain / bias)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="85" y="215" width="160" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="rcfilter" value="Anti-alias RC filter&#10;(the sampling lesson)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="85" y="285" width="160" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="jack" value="3.5 mm jack" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="85" y="355" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="usb" value="USB audio adapter&#10;(approx $8, line/mic in)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="85" y="420" width="160" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="capture" value="Stage 1: capture_test.py&#10;record, VU meter, --list" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="355" y="150" width="260" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="spectro" value="Stage 2: spectrogram.py&#10;live FFT spectrogram" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="355" y="220" width="260" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="features" value="Stage 3: features.analyze() -&gt; JSON&#10;dominant Hz, tonal peaks, band energy,&#10;60 Hz hum score, spectral centroid" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="355" y="290" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ollama" value="Stage 4-5: Ollama + qwen2.5:3b&#10;LLM tools over analyze():&#10;capture_and_analyze(), get_spectrum_image(),&#10;detect_tone(), classify_sound()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="355" y="380" width="260" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="notbuilt" value="not built yet" style="text;html=1;align=left;fontSize=10;fontStyle=2;fontColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="355" y="462" width="120" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="webui" value="Open WebUI&#10;(browser chat, renders the&#10;spectrogram image)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="710" y="150" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="bubble" value="&quot;What's that noise?&quot;&#10;&#10;-&gt; records 2 s, analyzes&#10;-&gt; { dominant: 60 Hz,&#10;     harmonics: 120/180 Hz,&#10;     label: 'mains hum' }&#10;&#10;LLM: &quot;That's 60 Hz mains hum -&#10;likely a ground loop. Here is&#10;the spectrum.&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacingLeft=8;verticalAlign=top;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="710" y="240" width="190" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="eA1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#d79b00;" edge="1" parent="1" source="mic" target="preamp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eA2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#d79b00;" edge="1" parent="1" source="preamp" target="rcfilter">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eA3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#d79b00;" edge="1" parent="1" source="rcfilter" target="jack">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eA4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#d79b00;" edge="1" parent="1" source="jack" target="usb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eAB" value="USB audio, approx 44.1 kHz" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeWidth=2;fontStyle=2;" edge="1" parent="1" source="usb" target="capture">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eB1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="capture" target="spectro">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eB2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="spectro" target="features">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eB3" value="structured facts" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontStyle=2;" edge="1" parent="1" source="features" target="ollama">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eBC" value="chat + tool calls" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;startArrow=block;endArrow=block;strokeWidth=2;fontStyle=2;" edge="1" parent="1" source="ollama" target="webui">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lg" value="Legend" style="text;html=1;fontStyle=1;fontSize=12;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="600" width="60" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lg1" value="" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="100" y="600" width="22" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lg1t" value="Built and runs on Mac today (Stages 1-3)" style="text;html=1;align=left;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="126" y="600" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lg2" value="" style="rounded=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="370" y="600" width="22" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lg2t" value="Hardware - son solders" style="text;html=1;align=left;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="396" y="600" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lg3" value="" style="rounded=1;fillColor=#f8cecc;strokeColor=#b85450;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="550" y="600" width="22" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lg3t" value="Not built yet (Stage 4-5)" style="text;html=1;align=left;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="576" y="600" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lg4" value="" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="740" y="600" width="22" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lg4t" value="Chat front-end" style="text;html=1;align=left;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="766" y="600" width="120" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="Options Considered" id="opts-page">
+    <mxGraphModel dx="1024" dy="768" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="otitle" value="Options considered in the design chat (chosen path highlighted)" style="text;html=1;align=center;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="900" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="root" value="Jetson + local LLM + chat UI&#10;for an EE student's soldering project" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="380" y="70" width="240" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="prepivot" value="Pre-pivot idea: generic sensors&#10;-&gt; soldered ESP32 node&#10;(split hardware from the brain)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontColor=#666666;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="700" y="70" width="240" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="epre" value="superseded" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;dashed=1;fontStyle=2;fontColor=#999999;strokeColor=#999999;" edge="1" parent="1" source="root" target="prepivot">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pivot" value="Signal-processing pivot - 4 archetypes" style="text;html=1;fontStyle=1;fontSize=13;align=center;" vertex="1" parent="1">
+          <mxGeometry x="40" y="150" width="900" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="aa" value="Acoustic Analyzer  [CHOSEN]&#10;mic + preamp, live FFT/spectrogram,&#10;sound classifier&#10;best blend of soldering + DSP + demo" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="185" width="210" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="filt" value="Analog Filter and Bode Lab&#10;op-amp Sallen-Key filters,&#10;measure/plot transfer function&#10;most curriculum-aligned" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="270" y="185" width="210" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="ecg" value="Biosignal / ECG Monitor&#10;AD8232 front-end + electrodes,&#10;Pan-Tompkins R-peak detect,&#10;heart rate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="500" y="185" width="210" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="rf" value="RF / SDR Explorer&#10;RTL-SDR + antenna,&#10;FFT waterfall, AM/FM demod&#10;(light soldering)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="730" y="185" width="210" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="er1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="root" target="aa">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="er2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="root" target="filt">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="er3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="root" target="ecg">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="er4" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="root" target="rf">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fetitle" value="Mic front-end paths for the Acoustic Analyzer" style="text;html=1;fontStyle=1;fontSize=13;align=center;" vertex="1" parent="1">
+          <mxGeometry x="40" y="320" width="670" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="pA" value="Path A  [CHOSEN]&#10;electret + MAX9814 -&gt; USB sound card&#10;most analog learning, trivial software" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="355" width="210" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="pB" value="Path B&#10;INMP441 I2S MEMS mic -&gt; Jetson I2S&#10;cleaner signal, device-tree tinkering" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="270" y="355" width="210" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="pC" value="Path C&#10;INMP441 + ESP32, wireless stream&#10;planned Stage-2 upgrade" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="500" y="355" width="210" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="ep1" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="aa" target="pA">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ep2" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="aa" target="pB">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ep3" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;" edge="1" parent="1" source="aa" target="pC">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,461 @@
+<title>Acoustic Analyzer — a local edge-AI that hears sound</title>
+<style>
+  :root{
+    --bg:#0c0d13; --panel:#14161f; --inset:#0a0b10; --border:#252938;
+    --text:#e9eaf2; --muted:#969abb; --faint:#6a6f86;
+    --accent:#ff4d8d; --accent-2:#ffa23a; --accent-ink:#0c0d13;
+    --ok:#35d07f; --next:#4aa8ff; --stretch:#8b90a6; --warn:#ffb020;
+    --shadow:0 1px 0 rgba(255,255,255,.03), 0 18px 40px -24px rgba(0,0,0,.7);
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f5f3ee; --panel:#ffffff; --inset:#efece4; --border:#e2ded4;
+      --text:#191a20; --muted:#5f6373; --faint:#8b8f9d;
+      --accent:#d6206e; --accent-2:#d9760a; --accent-ink:#ffffff;
+      --ok:#1a9e57; --next:#1f6fd6; --stretch:#868b99; --warn:#b9780a;
+      --shadow:0 1px 0 rgba(255,255,255,.6), 0 22px 44px -30px rgba(40,20,40,.30);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0c0d13; --panel:#14161f; --inset:#0a0b10; --border:#252938;
+    --text:#e9eaf2; --muted:#969abb; --faint:#6a6f86;
+    --accent:#ff4d8d; --accent-2:#ffa23a; --accent-ink:#0c0d13;
+    --ok:#35d07f; --next:#4aa8ff; --stretch:#8b90a6; --warn:#ffb020;
+    --shadow:0 1px 0 rgba(255,255,255,.03), 0 18px 40px -24px rgba(0,0,0,.7);
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f3ee; --panel:#ffffff; --inset:#efece4; --border:#e2ded4;
+    --text:#191a20; --muted:#5f6373; --faint:#8b8f9d;
+    --accent:#d6206e; --accent-2:#d9760a; --accent-ink:#ffffff;
+    --ok:#1a9e57; --next:#1f6fd6; --stretch:#868b99; --warn:#b9780a;
+    --shadow:0 1px 0 rgba(255,255,255,.6), 0 22px 44px -30px rgba(40,20,40,.30);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+    line-height:1.6;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--accent);font-weight:600}
+  h1,h2,h3{font-family:var(--mono);font-weight:700;text-wrap:balance;line-height:1.1;margin:0}
+  h2{font-size:clamp(1.35rem,3.4vw,1.85rem);letter-spacing:-.01em}
+  h3{font-size:1.02rem;letter-spacing:.01em}
+  p{margin:0}
+  .lede{font-size:1.12rem;color:var(--text);max-width:63ch}
+  .muted{color:var(--muted)}
+  section{padding:56px 0;border-top:1px solid var(--border)}
+  .sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:26px;flex-wrap:wrap}
+  .sec-num{font-family:var(--mono);font-size:.8rem;color:var(--faint);
+    border:1px solid var(--border);border-radius:5px;padding:2px 8px}
+
+  /* top bar */
+  .topbar{display:flex;justify-content:space-between;align-items:center;
+    padding:18px 0;position:sticky;top:0;z-index:10;
+    background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--border)}
+  .brand{font-family:var(--mono);font-weight:700;letter-spacing:.02em;display:flex;gap:9px;align-items:center}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);
+    box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)}
+  #theme{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--muted);background:var(--panel);border:1px solid var(--border);
+    border-radius:6px;padding:7px 11px;cursor:pointer}
+  #theme:hover{color:var(--text);border-color:var(--accent)}
+
+  /* hero */
+  .hero{padding:64px 0 52px}
+  .hero h1{font-size:clamp(2.6rem,8vw,4.6rem);letter-spacing:-.03em;margin:16px 0 0}
+  .hero .lede{margin-top:20px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}
+  .chip{font-family:var(--mono);font-size:.74rem;letter-spacing:.03em;color:var(--muted);
+    background:var(--panel);border:1px solid var(--border);border-radius:999px;padding:6px 12px}
+
+  /* instrument display */
+  .display{margin-top:34px;background:var(--inset);border:1px solid var(--border);
+    border-radius:14px;padding:14px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .display .scr{position:relative;border-radius:9px;overflow:hidden;background:#05060a}
+  canvas#spec{display:block;width:100%;height:180px}
+  .axis{position:absolute;right:8px;top:6px;bottom:6px;display:flex;flex-direction:column;
+    justify-content:space-between;font-family:var(--mono);font-size:.62rem;color:#c8c2d8;
+    text-shadow:0 1px 2px #000;pointer-events:none}
+  .hum-tag{position:absolute;left:10px;bottom:10px;font-family:var(--mono);font-size:.64rem;
+    color:#ffd7c2;background:rgba(0,0,0,.45);border:1px solid rgba(255,120,90,.5);
+    border-radius:5px;padding:2px 7px;pointer-events:none}
+  .readout{display:flex;flex-wrap:wrap;gap:20px 30px;margin-top:14px;padding:0 4px 2px;
+    font-family:var(--mono);font-size:.8rem}
+  .readout .k{color:var(--faint);letter-spacing:.08em;font-size:.66rem;text-transform:uppercase;display:block}
+  .readout .v{color:var(--text);font-variant-numeric:tabular-nums}
+  .readout .v.hot{color:var(--accent-2)}
+
+  /* generic cards */
+  .grid{display:grid;gap:16px}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;
+    padding:20px;box-shadow:var(--shadow)}
+  .card h3{margin-bottom:8px}
+  .card p{color:var(--muted);font-size:.94rem}
+
+  /* pipeline */
+  .pipe{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:stretch;gap:12px}
+  .stage{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;
+    box-shadow:var(--shadow)}
+  .stage .z{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent)}
+  .stage h3{margin:8px 0 10px;font-size:.98rem}
+  .stage ul{margin:0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+  .stage li{font-family:var(--mono);font-size:.78rem;color:var(--muted);
+    padding-left:15px;position:relative}
+  .stage li::before{content:"›";position:absolute;left:0;color:var(--accent)}
+  .arrow{align-self:center;font-family:var(--mono);color:var(--faint);font-size:1.3rem}
+  .owner{margin-top:12px;font-family:var(--mono);font-size:.66rem;letter-spacing:.06em;
+    color:var(--faint);text-transform:uppercase}
+
+  /* status console */
+  .console{background:var(--inset);border:1px solid var(--border);border-radius:12px;
+    overflow:hidden;box-shadow:var(--shadow)}
+  .console .row{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;
+    padding:14px 18px;border-bottom:1px solid var(--border)}
+  .console .row:last-child{border-bottom:0}
+  .console .n{font-family:var(--mono);color:var(--faint);font-size:.85rem;width:2.4ch}
+  .console .lbl{font-size:.95rem}
+  .console .lbl b{font-family:var(--mono);font-weight:600}
+  .console .lbl .sub{display:block;color:var(--muted);font-size:.82rem}
+  .state{font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;
+    padding:5px 10px;border-radius:999px;white-space:nowrap;border:1px solid}
+  .state.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 45%,transparent);
+    background:color-mix(in srgb,var(--ok) 12%,transparent)}
+  .state.next{color:var(--next);border-color:color-mix(in srgb,var(--next) 45%,transparent);
+    background:color-mix(in srgb,var(--next) 12%,transparent)}
+  .state.stretch{color:var(--stretch);border-color:color-mix(in srgb,var(--stretch) 40%,transparent);
+    background:color-mix(in srgb,var(--stretch) 12%,transparent)}
+
+  /* terminal */
+  .term{background:#080910;border:1px solid var(--border);border-radius:12px;overflow:hidden;
+    box-shadow:var(--shadow);font-family:var(--mono);font-size:.85rem}
+  .term .bar{display:flex;gap:7px;padding:12px 14px;border-bottom:1px solid #1b1e2b;background:#0d0f18}
+  .term .bar i{width:11px;height:11px;border-radius:50%;background:#2a2e40}
+  .term .bar i:first-child{background:#ff5f57}.term .bar i:nth-child(2){background:#febc2e}
+  .term .bar i:nth-child(3){background:#28c840}
+  .term .body{padding:16px 18px;line-height:1.85;color:#d6d8e6;overflow-x:auto}
+  .term .you{color:#7fd4ff}.term .tool{color:#ffa23a}.term .ag{color:#ff88b6}
+  .term .cmt{color:#5a6076}
+
+  /* BOM table */
+  .tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow)}
+  table{width:100%;border-collapse:collapse;font-size:.9rem;min-width:520px;background:var(--panel)}
+  th,td{text-align:left;padding:11px 16px;border-bottom:1px solid var(--border)}
+  thead th{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);background:var(--inset)}
+  tbody tr:last-child td{border-bottom:0}
+  td .p{font-family:var(--mono);color:var(--text)}
+  td.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+  .roadmap td .st{font-family:var(--mono);font-size:.74rem}
+
+  /* future ideas */
+  .idea{border-left:2px solid var(--accent);padding:2px 0 2px 18px;margin-bottom:18px}
+  .idea h3{font-size:.98rem;margin-bottom:4px}
+  .idea h3 .star{color:var(--accent-2)}
+  .idea p{color:var(--muted);font-size:.92rem}
+  .note{background:color-mix(in srgb,var(--accent) 8%,var(--panel));
+    border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border));
+    border-radius:10px;padding:14px 16px;font-size:.9rem;color:var(--text);margin-bottom:22px}
+  .note b{font-family:var(--mono)}
+
+  footer{padding:44px 0 60px;border-top:1px solid var(--border);color:var(--faint);
+    font-family:var(--mono);font-size:.78rem;display:flex;justify-content:space-between;
+    flex-wrap:wrap;gap:12px}
+
+  @media (max-width:760px){
+    .g3,.g2{grid-template-columns:1fr}
+    .pipe{grid-template-columns:1fr}
+    .arrow{transform:rotate(90deg);justify-self:center}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+
+<div class="topbar">
+  <div class="wrap" style="display:flex;justify-content:space-between;align-items:center;padding:0;width:100%">
+    <span class="brand"><span class="dot"></span>acoustic-analyzer</span>
+    <button id="theme" aria-label="Toggle color theme">◐ theme</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <span class="eyebrow">Edge-AI · Signal processing · a father–son build</span>
+    <h1>Acoustic&nbsp;Analyzer</h1>
+    <p class="lede">A local edge-AI that listens through a soldered microphone and explains what
+      it hears — running entirely on an NVIDIA Jetson. No cloud, and no raw audio ever leaves
+      the box: the language model reasons only over the numbers the DSP distills.</p>
+    <div class="chips">
+      <span class="chip">Jetson Orin Nano</span>
+      <span class="chip">Ollama · qwen2.5:3b</span>
+      <span class="chip">Python DSP · numpy / scipy</span>
+      <span class="chip">MAX9814 analog front-end</span>
+      <span class="chip">Fully offline</span>
+    </div>
+
+    <div class="display" aria-hidden="true">
+      <div class="scr">
+        <canvas id="spec" width="1024" height="180"></canvas>
+        <div class="axis"><span>8k</span><span>6k</span><span>4k</span><span>2k</span><span>0 Hz</span></div>
+        <div class="hum-tag">◂ 60 Hz mains hum + 120 / 180 Hz harmonics</div>
+      </div>
+      <div class="readout">
+        <span><span class="k">label</span><span class="v hot">electrical hum (mains)</span></span>
+        <span><span class="k">dominant</span><span class="v">60.0 Hz</span></span>
+        <span><span class="k">rms</span><span class="v">−22.0 dB</span></span>
+        <span><span class="k">hum score</span><span class="v">1.00</span></span>
+        <span><span class="k">centroid</span><span class="v">210 Hz</span></span>
+      </div>
+    </div>
+  </header>
+
+  <section id="thesis">
+    <div class="sec-head"><span class="sec-num">01</span><h2>The trick: the model never hears raw audio</h2></div>
+    <p class="lede muted" style="max-width:70ch">A 3-billion-parameter model can't listen to a waveform — and
+      shouldn't have to. A Python DSP layer turns every recording into a compact set of
+      <span style="color:var(--text)">structured facts</span>, and the LLM reasons over those. That keeps the
+      model small, the device offline, and the reasoning grounded in real measurements.</p>
+    <div class="grid g3" style="margin-top:26px">
+      <div class="card"><h3>Hear</h3><p>An electret mic + MAX9814 preamp your son solders feeds
+        clean audio to the Jetson over a USB sound card.</p></div>
+      <div class="card"><h3>Distill</h3><p><span class="p" style="color:var(--accent)">features.analyze()</span>
+        extracts dominant frequency, tonal peaks, band energy, a 60 Hz hum score, and a heuristic label — as JSON.</p></div>
+      <div class="card"><h3>Explain</h3><p>The local model calls that as a tool, then answers in plain
+        language: <em>“that's 60 Hz mains hum — likely a ground loop.”</em></p></div>
+    </div>
+    <p class="muted" style="margin-top:22px;font-size:.92rem">Origin: a soldering project for a
+      3rd-year EE student, paired with a Jetson and a local LLM. It began as generic sensors, then
+      pivoted to signal processing — where the GPU earns its keep and the soldering moves to a
+      meaningful analog front-end.</p>
+  </section>
+
+  <section id="chain">
+    <div class="sec-head"><span class="sec-num">02</span><h2>The signal chain</h2></div>
+    <div class="pipe">
+      <div class="stage">
+        <span class="z">① Analog front-end</span>
+        <h3>Sound → clean audio</h3>
+        <ul><li>Electret mic capsule</li><li>MAX9814 AGC preamp</li><li>Anti-alias RC filter</li>
+          <li>3.5 mm jack → USB card</li></ul>
+        <div class="owner">Son solders</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="stage">
+        <span class="z">② Jetson — DSP + LLM</span>
+        <h3>Audio → facts → answer</h3>
+        <ul><li>capture_test · spectrogram</li><li>features.analyze() → JSON</li>
+          <li>Ollama · qwen2.5:3b</li><li>tool-calling agent</li></ul>
+        <div class="owner">You code</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="stage">
+        <span class="z">③ Chat</span>
+        <h3>Ask in plain language</h3>
+        <ul><li>“what's that noise?”</li><li>“is there 60 Hz hum?”</li><li>“show me the spectrum”</li>
+          <li>Open WebUI (browser)</li></ul>
+        <div class="owner">Anyone on the Wi-Fi</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="status">
+    <div class="sec-head"><span class="sec-num">03</span><h2>Build status</h2>
+      <span class="muted" style="font-family:var(--mono);font-size:.78rem">Stages 1–5 run on the Mac today</span></div>
+    <div class="console">
+      <div class="row"><span class="n">1</span>
+        <span class="lbl"><b>Capture</b><span class="sub">live level meter · record to WAV · device list</span></span>
+        <span class="state ok">✓ built</span></div>
+      <div class="row"><span class="n">2</span>
+        <span class="lbl"><b>Spectrogram</b><span class="sub">live scrolling FFT display</span></span>
+        <span class="state ok">✓ built</span></div>
+      <div class="row"><span class="n">3</span>
+        <span class="lbl"><b>Feature extractor</b><span class="sub">features.analyze() → structured JSON facts</span></span>
+        <span class="state ok">✓ built</span></div>
+      <div class="row"><span class="n">4</span>
+        <span class="lbl"><b>Local agent</b><span class="sub">agent.py · Ollama qwen2.5:3b tool-calling loop</span></span>
+        <span class="state ok">✓ built · verified</span></div>
+      <div class="row"><span class="n">5</span>
+        <span class="lbl"><b>Tools</b><span class="sub">capture_and_analyze · get_spectrum_image · list_input_devices</span></span>
+        <span class="state ok">✓ built</span></div>
+      <div class="row"><span class="n">6</span>
+        <span class="lbl"><b>HTTP tool service</b><span class="sub">FastAPI over the tools — powers Open WebUI, NFC, containers</span></span>
+        <span class="state next">→ next</span></div>
+      <div class="row"><span class="n">7</span>
+        <span class="lbl"><b>Open WebUI + Jetson container</b><span class="sub">browser chat · docker compose · GPU + mic passthrough</span></span>
+        <span class="state next">→ next</span></div>
+      <div class="row"><span class="n">8</span>
+        <span class="lbl"><b>Sound classifier</b><span class="sub">log-mel CNN naming speech / music / hum / clap</span></span>
+        <span class="state stretch">stretch</span></div>
+    </div>
+  </section>
+
+  <section id="demo">
+    <div class="sec-head"><span class="sec-num">04</span><h2>What it looks like</h2>
+      <span class="muted" style="font-family:var(--mono);font-size:.78rem">actual verified run</span></div>
+    <div class="term">
+      <div class="bar"><i></i><i></i><i></i></div>
+      <div class="body">
+<span class="cmt"># python agent.py  (model: qwen2.5:3b, local)</span><br>
+<span class="you">you&gt;</span> what's that noise?<br>
+<span class="tool">&nbsp;&nbsp;[tool] capture_and_analyze(seconds=2)</span><br>
+<span class="cmt">&nbsp;&nbsp;→ { "label":"electrical hum (mains-related)", "dominant_hz":60.0,</span><br>
+<span class="cmt">&nbsp;&nbsp;&nbsp;&nbsp;"peaks_hz":[60,120,180], "hum_60hz_score":1.00, "rms_db":-22.0 }</span><br>
+<span class="ag">agent&gt;</span> The noise is most likely mains-related electrical hum (a ground loop or<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;transformer). The dominant frequency is 60 Hz, with strong harmonics at<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;120 Hz and 180 Hz — typically a power-supply or grounding issue.
+      </div>
+    </div>
+  </section>
+
+  <section id="hardware">
+    <div class="sec-head"><span class="sec-num">05</span><h2>The soldering project</h2></div>
+    <p class="lede muted" style="max-width:68ch">Hand-soldered, through-hole assembly on perfboard — real analog
+      EE, low-stakes (~$25 of parts, the Jetson never gets soldered). Three tasks in rising skill:
+      <span style="color:var(--text)">headers → the anti-alias RC filter → point-to-point wiring.</span></p>
+    <div class="tablewrap" style="margin-top:24px">
+      <table>
+        <thead><tr><th>Component</th><th>Exact spec / connector</th><th>Role</th><th class="num">~$</th><th>Buy</th></tr></thead>
+        <tbody>
+          <tr><td><span class="p">MAX9814 module</span></td><td>Adafruit #1713 · mic on board · solder header</td><td>AGC mic preamp</td><td class="num">8</td><td><a href="https://www.amazon.com/s?k=MAX9814+microphone+amplifier+module" target="_blank" rel="noopener">search ↗</a></td></tr>
+          <tr><td><span class="p">USB audio adapter</span></td><td><b>USB-A</b> plug · <b>3.5 mm mic in</b> (TRS)</td><td>Audio into Jetson</td><td class="num">8</td><td><a href="https://www.amazon.com/s?k=usb+external+sound+card+adapter+microphone+input" target="_blank" rel="noopener">search ↗</a></td></tr>
+          <tr><td>Resistor</td><td><span class="p">1 kΩ</span> · brown-black-red</td><td>RC low-pass (series)</td><td class="num">1</td><td><a href="https://www.amazon.com/s?k=resistor+assortment+kit" target="_blank" rel="noopener">search ↗</a></td></tr>
+          <tr><td>Ceramic capacitor</td><td><span class="p">10 nF</span> · marked “103”</td><td>RC low-pass (shunt) · fc ≈ 16 kHz</td><td class="num">1</td><td><a href="https://www.amazon.com/s?k=ceramic+capacitor+assortment+kit" target="_blank" rel="noopener">search ↗</a></td></tr>
+          <tr><td>Capacitor (DC block)</td><td><span class="p">1 µF</span> · “105” or electrolytic (+→OUT)</td><td>DC block on OUT</td><td class="num">1</td><td><a href="https://www.amazon.com/s?k=electrolytic+capacitor+assortment+kit" target="_blank" rel="noopener">search ↗</a></td></tr>
+          <tr><td>3.5 mm plug pigtail</td><td><b>male 3-pole TRS</b> · tip=sig, sleeve=GND</td><td>Signal out</td><td class="num">3</td><td><a href="https://www.amazon.com/s?k=3.5mm+male+plug+pigtail+cable" target="_blank" rel="noopener">search ↗</a></td></tr>
+          <tr><td>Perfboard + headers + wire</td><td>2.54 mm pitch · 22 AWG solid</td><td>Mounting</td><td class="num">7</td><td><a href="https://www.amazon.com/s?k=perfboard+prototype+board+2.54mm" target="_blank" rel="noopener">search ↗</a></td></tr>
+          <tr><td>Power</td><td>3×AA (4.5 V) or USB-A 5 V breakout</td><td>Feeds the MAX9814</td><td class="num">2</td><td><a href="https://www.amazon.com/s?k=3+aa+battery+holder+with+leads" target="_blank" rel="noopener">search ↗</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted" style="margin-top:16px;font-size:.88rem">Signal chain:
+      <span class="p" style="color:var(--text)">mic → MAX9814 → 1 µF DC-block → R+C low-pass → 3.5 mm jack → USB adapter → Jetson</span>.
+      Links are Amazon <em>searches</em> (they never go stale — pick the best listing). Get the adapter in
+      <b>USB-A</b> for the Jetson; on a USB-C-only Mac add a USB-C→USB-A adapter for testing.</p>
+  </section>
+
+  <section id="stack">
+    <div class="sec-head"><span class="sec-num">06</span><h2>Software &amp; the plan ahead</h2></div>
+    <div class="grid g2">
+      <div class="card">
+        <h3>The stack (all local, all free)</h3>
+        <p style="margin-top:10px">
+          <b style="font-family:var(--mono);color:var(--text)">DSP</b> — numpy · scipy · matplotlib · sounddevice<br>
+          <b style="font-family:var(--mono);color:var(--text)">LLM</b> — Ollama, GPU-accelerated on the Jetson<br>
+          <b style="font-family:var(--mono);color:var(--text)">Model</b> — qwen2.5:3b (strong tool-calling)<br>
+          <b style="font-family:var(--mono);color:var(--text)">Chat</b> — Open WebUI, browser, renders the spectrogram</p>
+      </div>
+      <div class="card">
+        <h3>Integration: one HTTP tool service</h3>
+        <p style="margin-top:10px">The decided next build is a thin FastAPI service over the existing tools —
+          <span class="p" style="color:var(--accent)">POST /analyze</span>,
+          <span class="p" style="color:var(--accent)">POST /spectrum</span>, plus an OpenAPI schema.
+          Open WebUI calls it as an external tool server, and the <em>same</em> endpoint later powers
+          the NFC trigger, the container deploy, and a possible Go/vakit vertical.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="future">
+    <div class="sec-head"><span class="sec-num">07</span><h2>Future ideas</h2></div>
+    <div class="note"><b>iPhone NFC reality:</b> iPhones can <em>read</em> NDEF tags and trigger Shortcuts,
+      but can't act as a programmable tag. So design around iPhone-as-reader + physical tags.</div>
+    <div class="grid g2">
+      <div>
+        <div class="idea"><h3>Tap-to-analyze <span class="star">★</span></h3>
+          <p>An NFC sticker on the enclosure + an iOS Shortcut that hits the Jetson's endpoint. Tap the
+            phone → it records, analyzes, and speaks the result. No app — just the HTTP service.</p></div>
+        <div class="idea"><h3>PN532 reader on the Jetson <span class="star">★</span></h3>
+          <p>Solder a PN532 NFC module; physical tokens become commands — a “record” card, a “hum test”
+            card, a “show spectrum” card. More real EE, over I²C.</p></div>
+      </div>
+      <div>
+        <div class="idea"><h3>Sound-reactive OLED</h3>
+          <p>A soldered SSD1306 showing a live VU meter or spectrum right on the device.</p></div>
+        <div class="idea"><h3>Two-mic direction finding</h3>
+          <p>TDOA / beamforming to point at a sound source — genuine multi-channel DSP.</p></div>
+        <div class="idea"><h3>“Shazam for household sounds”</h3>
+          <p>The Stage-8 classifier naming appliances, alarms, and everyday noises.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Built on a Mac · deploys to the Jetson unchanged</span>
+    <span>features.analyze() → JSON → local LLM</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  // ---- theme toggle ----
+  var btn=document.getElementById('theme');
+  function cur(){var d=document.documentElement.getAttribute('data-theme');
+    if(d) return d; return matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}
+  btn.addEventListener('click',function(){
+    var next=cur()==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme',next);
+    btn.textContent=(next==='dark'?'◐':'◑')+' theme';
+  });
+
+  // ---- magma-colormap scrolling spectrogram ----
+  var cv=document.getElementById('spec'), ctx=cv.getContext('2d',{alpha:false});
+  var MAG=[[0,0,4],[28,16,68],[79,18,123],[129,37,129],[181,54,122],
+           [229,80,100],[251,135,97],[254,194,135],[252,253,191]];
+  function magma(t){t=t<0?0:t>1?1:t;var x=t*(MAG.length-1),i=Math.floor(x),f=x-i;
+    var a=MAG[i],b=MAG[Math.min(i+1,MAG.length-1)];
+    return[a[0]+(b[0]-a[0])*f|0,a[1]+(b[1]-a[1])*f|0,a[2]+(b[2]-a[2])*f|0];}
+
+  var W=0,H=0,tt=0;
+  function resize(){W=cv.width=Math.max(320,cv.clientWidth|0);H=cv.height=180;
+    ctx.fillStyle='#05060a';ctx.fillRect(0,0,W,H);
+    for(var x=0;x<W;x++) column(x,(x-W)*0.05);}   // pre-fill history
+  function intensity(fr,time){
+    // fr: 0 = low freq (bottom), 1 = high freq (top)
+    var v=0;
+    // constant 60/120/180 Hz hum band near the bottom
+    v+=0.95*Math.exp(-Math.pow((fr-0.03)/0.018,2));
+    v+=0.45*Math.exp(-Math.pow((fr-0.07)/0.02,2));
+    v+=0.30*Math.exp(-Math.pow((fr-0.11)/0.022,2));
+    // a sweeping dominant tone
+    var c=0.42+0.24*Math.sin(time*0.5)+0.05*Math.sin(time*1.7);
+    v+=0.9*Math.exp(-Math.pow((fr-c)/0.02,2));
+    // a fainter upper partial
+    v+=0.4*Math.exp(-Math.pow((fr-(c*1.9))/0.03,2));
+    // background noise with low-freq rolloff
+    v+=0.10*(1-fr)*(0.4+0.6*Math.random());
+    return v*(1-0.35*fr);
+  }
+  function column(x,time){
+    var img=ctx.createImageData(1,H);
+    for(var y=0;y<H;y++){
+      var fr=(H-1-y)/(H-1);
+      var val=intensity(fr,time);
+      val=Math.pow(val<0?0:val>1?1:val,0.85);
+      var c=magma(val),o=y*4;
+      img.data[o]=c[0];img.data[o+1]=c[1];img.data[o+2]=c[2];img.data[o+3]=255;
+    }
+    ctx.putImageData(img,x,0);
+  }
+  var reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var last=0;
+  function frame(ts){
+    if(ts-last>33){ last=ts; tt+=0.06;
+      ctx.drawImage(cv,-1,0);          // scroll left 1px
+      column(W-1,tt);
+    }
+    requestAnimationFrame(frame);
+  }
+  resize();
+  addEventListener('resize',function(){var w=Math.max(320,cv.clientWidth|0);if(Math.abs(w-W)>2)resize();});
+  if(!reduce) requestAnimationFrame(frame);
+})();
+</script>

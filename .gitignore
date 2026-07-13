@@ -1,0 +1,25 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Audio recordings + generated outputs
+*.wav
+spectrum.png
+*.png.tmp
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Claude Code local (personal) settings — keep shared config, drop local overrides
+.claude/settings.local.json
+
+# Env / secrets
+.env
+.env.local
