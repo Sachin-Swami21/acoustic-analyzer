@@ -14,10 +14,21 @@ calls the DSP tools and explains the sound.
 
 ## Prerequisites
 
-- **Python 3.9+**
+- **git**, **Python 3.9+**
 - **Ollama** (installed below) — the local LLM runtime
 - A **microphone** (built-in on the Mac; the USB audio adapter on the Jetson)
 - ~2 GB free disk for the model
+
+---
+
+## 0 · Get the code
+
+```bash
+git clone https://github.com/swamiviswanathan/acoustic-analyzer.git
+cd acoustic-analyzer
+```
+
+All later commands are run from this folder.
 
 ---
 

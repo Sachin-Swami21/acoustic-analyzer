@@ -57,19 +57,23 @@ JSON the model reasons over.
 
 Works on your Mac today using the built-in mic; identical on the Jetson later.
 
-**Prerequisites:** Python 3.9+, and [Ollama](https://ollama.com).
+**Prerequisites:** [git](https://git-scm.com), Python 3.9+, and [Ollama](https://ollama.com).
 
 ```bash
-# 1. Local LLM
+# 1. Clone the repo
+git clone https://github.com/swamiviswanathan/acoustic-analyzer.git
+cd acoustic-analyzer
+
+# 2. Local LLM
 #    macOS:        brew install ollama
 #    Linux/Jetson: curl -fsSL https://ollama.com/install.sh | sh
 ollama pull qwen2.5:3b
 
-# 2. Python environment
+# 3. Python environment
 python3 -m venv .venv
 ./.venv/bin/pip install -r requirements.txt
 
-# 3. Run the agent
+# 4. Run the agent
 ./.venv/bin/python src/agent.py
 #    you> what's that noise?
 #    you> show me the spectrum        (saves spectrum.png)

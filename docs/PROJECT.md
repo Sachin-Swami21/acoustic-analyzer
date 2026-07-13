@@ -125,6 +125,56 @@ plus an 8-step solder checklist, print-friendly. ASCII version below.
   Adafruit) already have the electret mic soldered on — if so, skip task-1's mic capsule
   and just do headers + filter + jack.
 
+### Why each component?
+
+Follow the signal — **sound → mic → amplify → filter → connect → digitize → analyze.**
+Each part is one stage in that chain.
+
+**Signal path**
+
+- **Electret microphone** — *the transducer.* Turns sound-pressure waves into a tiny
+  (millivolt) voltage. It has a built-in transistor, so it needs a little power to run. The
+  output is far too weak to use directly — which is exactly why it's amplified next.
+- **MAX9814 preamp** — *the amplifier, with Automatic Gain Control (AGC).* Boosts the mic
+  signal to a usable level and automatically turns gain *down* on loud sounds / *up* on quiet
+  ones, so it doesn't clip — no knob to ride. Pins:
+  - **VDD / GND** — power (2.7–5.5 V); also biases the onboard mic.
+  - **OUT** — the amplified audio, sitting on a **~1.25 V DC bias** (→ the DC-block cap).
+  - **GAIN** — sets *max* gain: VDD = 40 dB, GND = 50 dB, open = 60 dB. We tie it to **VDD
+    (40 dB)** so a loud sound doesn't overdrive the sensitive sound-card input.
+  - **A/R (Attack/Release)** — how *fast* the AGC clamps down and recovers; leave open for the default.
+- **1 µF capacitor** — *DC block / coupling.* A capacitor passes AC but blocks DC, so in
+  series it lets the audio through while stripping the MAX9814's ~1.25 V offset. Without it,
+  that DC would shove the sound-card input off-center.
+- **1 kΩ resistor + 10 nF capacitor** — *anti-aliasing low-pass filter.* Sampling at 44.1 kHz
+  can only faithfully capture up to 22 kHz (Nyquist); any higher frequency "folds back" as a
+  false lower tone (**aliasing**). The cap shunts highs to ground while the resistor feeds the
+  signal, rolling off above `fc = 1/(2πRC) ≈ 16 kHz` — *before* the ADC sees it. Only the
+  product R×C sets the cutoff; lower either for more treble.
+- **3.5 mm TRS jack** — *the connector.* Carries the analog audio into the sound card.
+  **Tip = signal, Sleeve = ground** (mono).
+- **USB audio adapter** — *the ADC (digitizer).* The quietly critical part: it **samples** the
+  analog audio 44,100×/sec and turns it into the numbers the computer reads. External + USB so
+  it presents as a standard **microphone** on any computer *and* the Jetson (which lacks a good
+  analog input). Everything upstream exists to hand *this* a clean signal.
+
+**Build materials**
+
+- **Perfboard** — a trace-less grid board you solder onto for a **permanent, sturdy** circuit
+  (vs. a temporary breadboard); *you* make every connection.
+- **Pin headers** — 0.1″ pins soldered to module edges so they mount and accept wires (also the
+  easiest first solder task).
+- **Hookup wire (22 AWG solid)** — makes the point-to-point connections on the trace-less board.
+
+**Power**
+
+- **3×AA (4.5 V) or USB 5 V** — supplies the 2.7–5.5 V the MAX9814 needs to run and bias the
+  mic. It's separate because the USB adapter carries only the *signal*, not power. On the
+  Jetson, use its **5 V header pin**.
+
+> In one line: **mic hears → MAX9814 amplifies → R/C cleans → jack carries → USB adapter
+> digitizes → computer analyzes.**
+
 ### Shopping list / bill of materials (~$25–30)
 
 Connectors are called out explicitly (USB-A, 3.5 mm TRS, etc.). Links are **Amazon search
