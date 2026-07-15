@@ -1,36 +1,35 @@
 # Bootstrapping the Jetson Orin Nano — Apple Silicon Mac edition
 
-Box → booted **from your NVMe** → ready to run the Acoustic Analyzer, assuming your only
-computer is an **Apple Silicon Mac** (with an ARM Ubuntu VM) and you have an **NVMe SSD**.
+Box → **JetPack 6.2 on the SD card** → **NVMe mounted as fast storage** → **headless (SSH-only)** →
+ready to run the Acoustic Analyzer, from an **Apple Silicon Mac** with **no x86 PC**.
 
 > ⚠️ **The one hard constraint.** NVIDIA's flashing tools (SDK Manager, `flash.sh`) are
-> **x86-only**. Your Ubuntu VM on Apple Silicon is **ARM**, so it **cannot flash the Jetson** —
-> USB passthrough won't help. We therefore avoid host-flashing entirely and do everything on
-> the Jetson itself (it's arm64-native).
+> **x86-only**. An Apple Silicon Mac can't run them, and a Linux VM on Apple Silicon is **ARM**, so
+> it can't flash the Jetson either (USB passthrough won't help). We therefore **avoid host-flashing
+> entirely**: write the microSD straight from macOS and do everything else on the Jetson (arm64-native).
 >
-> **What your VM is / isn't for here:** you don't need it to flash. You can write the SD card
-> straight from macOS. Keep the VM around for arm64 Linux dev/testing if you like, but it's not
-> on the critical path.
->
-> **Version target:** JetPack 6.x (Ubuntu 22.04, CUDA 12) on the Orin Nano Developer Kit.
-> Confirm specifics at <https://developer.nvidia.com/embedded/jetpack> and the
-> *"Jetson Orin Nano Developer Kit Getting Started"* page.
+> **Version target:** **JetPack 6.2** = **Jetson Linux (L4T) 36.4.3**, Ubuntu 22.04, CUDA 12.
+> Download page: <https://developer.nvidia.com/embedded/jetpack-sdk-62>.
+> Note: JetPack **7.x dropped microSD images** (USB-installer only) — for the Mac-only path, stay on **6.2**.
 
 ---
 
 ## The strategy (why it's shaped this way)
 
 ```
-Apple Silicon Mac  ── write SD image (Balena Etcher, in macOS) ──►  microSD
+Apple Silicon Mac  ── flash SD image (Balena Etcher, in macOS) ──►  microSD (64 GB)
                                                                        │ boot
 Jetson Orin Nano ◄─────────────────────────────────────────────────────┘
-   1. boot from SD   2. update + JetPack   3. move rootfs → NVMe (on-device)
-   → OS now runs from the fast 256 GB NVMe; SD stays in as the boot partition
+   1. boot from SD   2. headless config (SSH, console, static IP)   3. NVMe = /mnt/nvme storage
+   → OS runs from the SD card; the fast NVMe holds Ollama models + datasets
 ```
 
-- **Root filesystem on NVMe** = the real speed win (OS, Ollama models, datasets all on the fast disk).
-- **The SD card stays inserted** — on this no-host method it still holds the boot partition.
-  Going fully SD-free (pure NVMe boot) *does* require an x86 host flash — see the fallback at the end.
+- **OS on the SD card, data on the NVMe.** Simple and Mac-friendly: no host flash, no rootfs
+  surgery. The NVMe (`/mnt/nvme`) is where models and datasets live — that's where disk speed matters.
+- **Console-only, headless.** We turn off the GNOME desktop to reclaim ~1–1.5 GB of RAM for the model,
+  and drive the box entirely over SSH.
+- Want the OS itself on the NVMe (avoids SD wear, faster boot)? That's an **optional** migration —
+  see [§6 · Optional: move rootfs to the NVMe](#6--optional--move-the-root-filesystem-to-the-nvme).
 
 ---
 
@@ -38,50 +37,62 @@ Jetson Orin Nano ◄────────────────────
 
 | Item | Notes |
 |------|-------|
-| Jetson Orin Nano Developer Kit | heatsink/fan attached |
-| **NVMe SSD** (your 256 GB) | M.2 2280, into the Key-M slot under the module |
-| microSD (64 GB+, UHS-1/A1) | the boot card |
-| Kit power adapter | barrel-jack DC on the Orin Nano dev kit — don't use a weak supply |
-| Monitor + **DisplayPort or HDMI**, USB keyboard + mouse | DisplayPort is the safer choice |
-| Ethernet cable | wired = simplest for setup |
-| **Balena Etcher** on your Mac | to write the SD image (from macOS directly) |
+| Jetson Orin Nano Developer Kit | heatsink/fan attached; WiFi/BT M.2 card + antennas are **pre-installed** |
+| **NVMe SSD** (256 GB used here → `nvme0n1` ~238 GB) | M.2 2280, Key-M slot under the module |
+| microSD (64 GB+, UHS-1/A1) | the boot/OS card (SanDisk Ultra 64 GB works) |
+| Kit power adapter | barrel-jack DC — don't use a weak supply (undervolt = random reboots) |
+| Monitor + **DisplayPort→HDMI adapter** (or DP monitor), USB keyboard/mouse | only needed for first boot; the Orin Nano's video-out is **DisplayPort** (a ~$8 DP→HDMI adapter into any HDMI monitor works) |
+| WiFi or Ethernet | either is fine; get it online during first boot |
+| **Balena Etcher** on your Mac | to flash the SD image from macOS |
 
-Install the NVMe now (power off): unscrew the standoff, seat the NVMe in the M.2 slot, screw down.
+Install the NVMe now (power off): unscrew the standoff, seat the NVMe in the M.2 Key-M slot, screw down.
 
 ---
 
-## 1 · Write the SD card (from macOS)
+## 1 · Flash the SD card (from macOS)
 
-1. Download the **Jetson Orin Nano Developer Kit SD-card image** (JetPack 6.x `.img`) from the
-   JetPack page above.
-2. Flash it with **Balena Etcher** (simplest on macOS) → select image → select the microSD → Flash.
-   *(CLI alt: `diskutil list` to find the disk, then `sudo dd if=jp6.img of=/dev/rdiskN bs=4m status=progress`.)*
-3. Insert the microSD into the slot on the **underside of the module**.
+1. Download the **JetPack 6.2 SD card image** for the Orin Nano Developer Kit:
+   <https://developer.nvidia.com/embedded/jetpack-sdk-62> → *"Download JetPack 6.2 SD card image for
+   Jetson Orin Nano Developer Kit"* (direct: `.../l4t/r36_release_v4.3/jp62-orin-nano-sd-card-image.zip`,
+   ~7–8 GB, free NVIDIA login may be required).
+2. **Do not unzip it.** In **Balena Etcher**: *Flash from file* → the `.zip` → select the microSD
+   (confirm the ~64 GB target with `diskutil list`, **not** your Mac's internal disk) → Flash (~15 min).
+3. When it finishes, macOS may pop **"The disk you inserted was not readable"** → click **Eject**,
+   **not** Initialize (macOS just can't read the Linux partitions — that's expected).
+4. Insert the microSD into the slot on the **underside of the module**.
 
-> If it later refuses to boot (blank screen, no NVIDIA logo): the kit's QSPI bootloader firmware
-> is likely older than this JetPack. Jump to **Fallback** at the bottom.
+> **Firmware note (important, but usually a non-issue on recent kits):** JetPack 6 needs the kit's
+> QSPI/UEFI firmware at **≥ 36.0**. Recent kits already ship compatible — *this build's was 36.4.3,
+> so no update was needed.* If the SD image **won't boot** (blank screen / boot loop), your firmware
+> is older than 36.0 → see [Fallback](#fallback--sd-image-wont-boot-old-firmware).
 
 ---
 
 ## 2 · First boot (on the Jetson)
 
-1. Connect monitor (DisplayPort), keyboard, mouse, Ethernet, then power on.
-2. Complete the Ubuntu **oobe**: language, keyboard, timezone, **username + password**, network.
-3. You reach the GNOME desktop. Open a terminal and update:
+1. Connect monitor (via the DP→HDMI adapter), USB keyboard/mouse, network, then power on the barrel jack.
+2. Complete the Ubuntu **oobe wizard**: language, keyboard, timezone, **username + password**
+   (⚠️ write the password down — you need it for every `sudo` and for SSH), and **network**
+   — if WiFi networks appear, your pre-installed antennas work; otherwise use Ethernet.
+   - If asked, accept the **max APP partition size** (uses the whole card).
+3. **First-boot quirks to expect (not failures):**
+   - It finishes by **installing Chromium** and can **hang on the "installation finished" window**.
+     Dismiss it with the **mouse** (the keyboard is sometimes dead at this screen), or drop to a text
+     console with **Ctrl+Alt+F3**, log in, and `sudo reboot`.
+   - Flaky USB keyboard on first boot? **Move it to a different USB port** — usually fixes it.
+     (Once SSH is up in §3, you won't need the local keyboard anyway.)
+4. Reach the desktop, open a terminal, and update + install the JetPack runtime:
    ```bash
    sudo apt update && sudo apt full-upgrade -y
+   sudo apt install -y nvidia-jetpack        # CUDA, cuDNN, TensorRT
    sudo reboot
-   ```
-4. Install JetPack runtime (CUDA, cuDNN, TensorRT):
-   ```bash
-   sudo apt install -y nvidia-jetpack
    ```
 5. Max performance (helps LLM inference a lot):
    ```bash
-   sudo nvpmodel -m 0     # MAXN
+   sudo nvpmodel -m 0     # MAXN / "Super" mode
    sudo jetson_clocks
    ```
-6. Monitoring (there is **no `nvidia-smi`** on Jetson — use `jtop`):
+6. Monitoring — there is **no `nvidia-smi`** on Jetson; use `jtop`:
    ```bash
    sudo pip3 install -U jetson-stats && sudo reboot
    jtop     # confirms GPU, JetPack version, temps
@@ -89,103 +100,208 @@ Install the NVMe now (power off): unscrew the standoff, seat the NVMe in the M.2
 
 ---
 
-## 3 · Move the root filesystem to the NVMe (the payoff)
+## 3 · Initial headless configuration
 
-Confirm the NVMe is visible, then migrate rootfs onto it with the well-known community scripts:
+Do these in order. **Get SSH working and confirmed *before* turning off the desktop** — otherwise a
+failed SSH leaves you stranded at the console.
+
+### 3a · Enable SSH
+```bash
+sudo systemctl enable --now ssh
+systemctl status ssh --no-pager        # want: active (running)
+# if "ssh.service not found":  sudo apt install -y openssh-server && sudo systemctl enable --now ssh
+```
+Find the IP and connect from your Mac:
+```bash
+ip -4 addr show | grep inet           # on the Jetson
+# on the Mac:
+ssh <user>@<jetson-ip>                # first time: type "yes", then the password
+```
+> **Same-subnet check:** the Mac and Jetson must share a subnet (e.g. both `192.168.1.x`). If the
+> Jetson landed on a different network/SSID, no firewall change helps — put both on the same WiFi.
+
+### 3b · Static IP (via NetworkManager / `nmcli`)
+Substitute your own values below — `<wifi-name>` is your SSID (from the command output), and pick a
+static address on your subnet. Find your connection name and gateway first:
+```bash
+nmcli -t -f NAME,DEVICE,TYPE,STATE connection show --active   # note the NAME (your SSID) + interface
+ip route | grep default                                       # note the gateway, e.g. 192.168.1.1
+```
+Pin it. Pick a **high** address to dodge the DHCP pool, or set a **router DHCP reservation** instead
+(safest). Example values below — replace with yours:
+```bash
+sudo nmcli connection modify "<wifi-name>" \
+  ipv4.method manual \
+  ipv4.addresses 192.168.1.50/24 \
+  ipv4.gateway 192.168.1.1 \
+  ipv4.dns "192.168.1.1 1.1.1.1"
+sudo nmcli connection up "<wifi-name>"
+```
+> ⚠️ `connection up` **drops your SSH session** (the IP just changed). That's success — reconnect at
+> the new address: `ssh <user>@<static-ip>`.
+
+### 3c · Console-only mode (reclaim RAM)
+Once SSH is confirmed working, kill the GNOME desktop so it boots to a text console:
+```bash
+sudo systemctl set-default multi-user.target
+sudo reboot
+```
+Frees ~1–1.5 GB of RAM for the model; SSH is unchanged. The monitor now shows a text login (unplug it
+whenever). Reverse anytime: `sudo systemctl set-default graphical.target` (or `start graphical.target`
+for a one-off).
+
+---
+
+## 4 · Set up the NVMe as storage (`/mnt/nvme`)
+
+The blank NVMe (`nvme0n1`, ~238 GB) becomes a fast disk for models + datasets. **These commands erase
+the NVMe** — verify every one targets **`nvme0n1`**, never the SD card (`mmcblk*`).
 
 ```bash
-lsblk                       # you should see nvme0n1 (~238 GB)
+lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT      # confirm nvme0n1 is blank (no fstype/mountpoint)
 
+# 1. Partition (GPT, one full partition) + format ext4
+sudo parted /dev/nvme0n1 --script mklabel gpt
+sudo parted /dev/nvme0n1 --script mkpart primary ext4 0% 100%
+sudo mkfs.ext4 -L nvme /dev/nvme0n1p1
+
+# 2. Mount + take ownership (write without sudo)
+sudo mkdir -p /mnt/nvme
+sudo mount /dev/nvme0n1p1 /mnt/nvme
+sudo chown -R $USER:$USER /mnt/nvme
+
+# 3. Auto-mount on every boot (UUID + nofail so a missing drive never blocks boot)
+echo "UUID=$(sudo blkid -s UUID -o value /dev/nvme0n1p1) /mnt/nvme ext4 defaults,nofail 0 2" | sudo tee -a /etc/fstab
+
+# 4. Verify
+sudo systemctl daemon-reload && sudo mount -a
+df -h /mnt/nvme                                 # ~234 GB mounted at /mnt/nvme
+```
+
+---
+
+## 5 · Set up for the Acoustic Analyzer
+
+### 5a · Ollama — with models on the NVMe
+The arm64 installer detects the Jetson's CUDA and uses the GPU:
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+ollama --version && systemctl status ollama --no-pager     # want: active (running)
+```
+**Redirect model storage to the NVMe** (default is the SD card). The service runs as user `ollama`,
+so a systemd drop-in sets `OLLAMA_MODELS`:
+```bash
+sudo mkdir -p /mnt/nvme/ollama
+sudo chown -R ollama:ollama /mnt/nvme/ollama
+
+sudo mkdir -p /etc/systemd/system/ollama.service.d
+sudo tee /etc/systemd/system/ollama.service.d/override.conf > /dev/null <<'EOF'
+[Service]
+Environment="OLLAMA_MODELS=/mnt/nvme/ollama"
+EOF
+
+sudo systemctl daemon-reload && sudo systemctl restart ollama
+```
+Pull the model and confirm it landed on the NVMe:
+```bash
+ollama pull qwen2.5:3b            # ~1.9 GB; chosen for strong tool-calling
+ls /mnt/nvme/ollama/blobs         # blob files here = models are on the NVMe
+ollama run qwen2.5:3b "hello"     # responds; watch jtop for a GPU spike
+```
+> Low on RAM (4 GB Jetson)? Use `qwen2.5:1.5b`.
+
+### 5b · Docker + NVIDIA default runtime (for the later compose deploy)
+```bash
+sudo usermod -aG docker $USER        # log out/in after
+sudo tee /etc/docker/daemon.json >/dev/null <<'EOF'
+{ "default-runtime": "nvidia",
+  "runtimes": { "nvidia": { "path": "nvidia-container-runtime", "runtimeArgs": [] } } }
+EOF
+sudo systemctl restart docker
+```
+
+### 5c · Audio front-end
+Plug the **USB-A** audio adapter (fed by the soldered MAX9814 board) into a USB-A port:
+```bash
+arecord -l                     # find the USB adapter's card number
+arecord -d 3 -f cd /tmp/t.wav && aplay /tmp/t.wav   # record + play back
+```
+
+### 5d · The project
+Get the folder onto the Jetson via `git clone`, or `scp` from your Mac
+(`scp -r ./acoustic-analyzer <user>@<jetson-ip>:~/`), then:
+```bash
+sudo apt install -y python3-venv portaudio19-dev libsndfile1   # sounddevice needs PortAudio
+cd ~/acoustic-analyzer
+python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
+./.venv/bin/python src/capture_test.py --list      # find the USB adapter's index N
+./.venv/bin/python src/agent.py                     # "what's that noise?"
+```
+The code is identical to the Mac — you just pass `--device N` for the USB card.
+
+---
+
+## 6 · Optional · move the root filesystem to the NVMe
+
+Only if you want the **OS itself** on the NVMe (faster boot, less SD wear). Not required — §4's
+storage mount already puts the heavy data (models/datasets) on the NVMe. This reformats the NVMe, so
+do it **before** §4 (or back up `/mnt/nvme` first):
+
+```bash
 git clone https://github.com/jetsonhacks/rootOnNVMe.git
 cd rootOnNVMe
 ./copy-rootfs-ssd.sh        # formats + copies the running rootfs to the NVMe
 ./setup-service.sh          # points the boot chain's root= at the NVMe
 sudo reboot
+df -h /                     # "/" should now be /dev/nvme0n1p1, not the SD card
 ```
-
-After reboot, verify the OS is now running from the SSD:
-```bash
-df -h /                     # the "/" mount should be /dev/nvme0n1p1, not the SD
-```
-That's it — the OS, models, and datasets now live on the fast NVMe. **Leave the SD card
-inserted** (it holds the boot partition on this method).
+**Leave the SD card inserted** — on this no-host method it still holds the boot partition. (Pure
+SD-free NVMe boot requires a one-time x86 host flash.)
 
 ---
 
-## 4 · Set up for the Acoustic Analyzer
-
-1. **Ollama** (arm64 installer detects Jetson CUDA and uses the GPU):
-   ```bash
-   curl -fsSL https://ollama.com/install.sh | sh
-   ollama pull qwen2.5:3b
-   ```
-2. **Docker + NVIDIA default runtime** (for the later compose deploy):
-   ```bash
-   sudo usermod -aG docker $USER        # log out/in after
-   sudo tee /etc/docker/daemon.json >/dev/null <<'EOF'
-   { "default-runtime": "nvidia",
-     "runtimes": { "nvidia": { "path": "nvidia-container-runtime", "runtimeArgs": [] } } }
-   EOF
-   sudo systemctl restart docker
-   ```
-3. **Audio front-end** — plug the **USB-A** audio adapter (fed by the soldered MAX9814 board)
-   into a USB-A port:
-   ```bash
-   arecord -l                     # find the USB adapter's card number
-   arecord -d 3 -f cd /tmp/t.wav && aplay /tmp/t.wav   # record + play back
-   ```
-4. **The project** (copy the folder over, or git clone):
-   ```bash
-   sudo apt install -y python3-venv portaudio19-dev libsndfile1   # sounddevice needs PortAudio
-   cd ~/acoustic-analyzer
-   python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
-   ./.venv/bin/python src/capture_test.py --list      # find the USB adapter's index N
-   ./.venv/bin/python src/agent.py                     # "what's that noise?"
-   ```
-   The code is identical to the Mac — you just pass `--device N` for the USB card.
-
-**Getting the folder onto the Jetson (Apple Silicon, no USB flashing):** easiest is
-`git clone` from a repo, or `scp` over the network from your Mac:
-```bash
-# from your Mac:
-scp -r ./acoustic-analyzer  <jetson-user>@<jetson-ip>:~/
-```
-
----
-
-## 5 · Verify it's healthy
+## 7 · Verify it's healthy
 
 - `jtop` → GPU present, JetPack version right, temps sane.
-- `df -h /` → root is on `/dev/nvme0n1p1`.
+- `df -h /mnt/nvme` → NVMe mounted (~234 GB).
+- `ls /mnt/nvme/ollama/blobs` → model blobs are on the NVMe.
 - `ollama run qwen2.5:3b "hello"` → responds; `jtop` shows a GPU spike.
+- `ssh <user>@<static-ip>` from the Mac → lands at the console (static IP + SSH working).
 - `arecord -l` → USB audio adapter listed.
 - `./.venv/bin/python src/agent.py` → tool fires, it explains a sound.
 
 ---
 
-## Fallback · if the SD image won't boot (old firmware)
+## Fallback · SD image won't boot (old firmware)
 
-Brand-new kits sometimes ship with QSPI firmware too old for JetPack 6, and updating that
-firmware **does** need x86 host flashing — which your Apple Silicon Mac can't do. Options, in
-order of least hassle:
+If the JetPack 6.2 SD image won't boot (blank screen / boot loop), the kit's QSPI firmware is older
+than 36.0. Recent kits (this one included) already ship ≥ 36.0, but older stock needs a one-time
+update. Since Apple Silicon can't host-flash, use the **microSD-only bridge path**:
 
-1. **Match the SD image to the firmware:** try an **older JetPack SD image** (e.g. 5.1.x). If it
-   boots, `sudo apt full-upgrade` and the on-device OTA can then move you forward.
-2. **Borrow/rent an x86 box once:** any Intel/AMD PC with Ubuntu 22.04 runs SDK Manager for a
-   one-time NVMe flash (this also gives you pure SD-free NVMe boot). A cheap used x86 mini-PC or
-   a friend's laptop for an hour does it.
-3. **Cloud x86 + USB:** not practical for USB flashing — skip.
+1. Check firmware: monitor + keyboard, power on, spam **Esc** into UEFI, read the version line.
+2. If < 36.0: flash + boot the **JetPack 5.1.3** image (`jp513-orin-nano-sd-card-image.zip`,
+   from <https://developer.nvidia.com/embedded/jetpack-sdk-513>), finish setup, get online.
+3. `sudo reboot` (runs the bootloader firmware update — watch the monitor, **don't cut power**).
+4. `sudo apt update && sudo apt install nvidia-l4t-jetson-orin-nano-qspi-updater` → `sudo reboot`.
+5. Re-flash the **same** microSD with the JetPack 6.2 image (§1) and boot.
 
-Once it boots at all, everything above (§2–§4) is Apple-Silicon-friendly and needs no PC.
+Alternative: borrow an x86 Ubuntu PC once and run SDK Manager (also enables pure SD-free NVMe boot).
 
 ---
 
 ## Gotchas
 
 - **No `nvidia-smi`** — normal on Jetson; use `jtop` / `tegrastats`.
-- **Use DisplayPort** if your monitor has it — some Orin Nano + HDMI combos are flaky.
+- **Video-out is DisplayPort** — a cheap DP→HDMI adapter into any HDMI monitor works (needed only for first boot).
+- **First-boot Chromium window hangs** — dismiss with the mouse, or Ctrl+Alt+F3 → `sudo reboot`.
+- **Flaky USB keyboard on first boot** — move it to a different USB port.
 - **Underpowered supply** → random reboots under load. Use the included adapter.
+- **Enable SSH *before* going console-only** — or a failed SSH strands you.
+- **Static IP drops your SSH session** on apply — reconnect at the new address (expected).
+- **Don't unplug the WiFi antennas** — the MHF4 connectors are fragile and pre-seated from the factory.
 - **`sounddevice` import errors** → install `portaudio19-dev`, then re-`pip install`.
 - **Ollama on CPU only** → confirm `nvidia-jetpack` is installed; watch `jtop` during a run.
-- **Later, in containers** → pass `--device /dev/snd` and add the container to the `audio` group,
-  or the mic is silent.
+- **Ollama models filling the SD card** → confirm the `OLLAMA_MODELS` drop-in (§5a) and that blobs are under `/mnt/nvme/ollama`.
+- **Later, in containers** → pass `--device /dev/snd` and add the container to the `audio` group, or the mic is silent.
+</content>
+</invoke>
