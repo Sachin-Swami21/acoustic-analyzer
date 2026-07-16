@@ -260,15 +260,15 @@
         <span class="z">③ Chat</span>
         <h3>Ask in plain language</h3>
         <ul><li>“what's that noise?”</li><li>“is there 60 Hz hum?”</li><li>“show me the spectrum”</li>
-          <li>Open WebUI (browser)</li></ul>
-        <div class="owner">Anyone on the Wi-Fi</div>
+          <li>web terminal (ttyd)</li></ul>
+        <div class="owner">Any browser on the Wi-Fi</div>
       </div>
     </div>
   </section>
 
   <section id="status">
     <div class="sec-head"><span class="sec-num">03</span><h2>Build status</h2>
-      <span class="muted" style="font-family:var(--mono);font-size:.78rem">Stages 1–5 run on the Mac today</span></div>
+      <span class="muted" style="font-family:var(--mono);font-size:.78rem">deployed on k3s · demo mode until the mic is soldered</span></div>
     <div class="console">
       <div class="row"><span class="n">1</span>
         <span class="lbl"><b>Capture</b><span class="sub">live level meter · record to WAV · device list</span></span>
@@ -286,12 +286,18 @@
         <span class="lbl"><b>Tools</b><span class="sub">capture_and_analyze · get_spectrum_image · list_input_devices</span></span>
         <span class="state ok">✓ built</span></div>
       <div class="row"><span class="n">6</span>
-        <span class="lbl"><b>HTTP tool service</b><span class="sub">FastAPI over the tools — powers Open WebUI, NFC, containers</span></span>
-        <span class="state next">→ next</span></div>
+        <span class="lbl"><b>HTTP tool service</b><span class="sub">FastAPI over the tools — /analyze, /spectrum</span></span>
+        <span class="state ok">✓ built</span></div>
       <div class="row"><span class="n">7</span>
-        <span class="lbl"><b>Open WebUI + Jetson container</b><span class="sub">browser chat · docker compose · GPU + mic passthrough</span></span>
-        <span class="state next">→ next</span></div>
+        <span class="lbl"><b>Deployed on k3s</b><span class="sub">Ollama (GPU) + tool service + terminal UI · all on NVMe</span></span>
+        <span class="state ok">✓ built</span></div>
       <div class="row"><span class="n">8</span>
+        <span class="lbl"><b>Reusable agent engine</b><span class="sub">agent_shell.py (OpenAPI auto-discovery) served as a ttyd web terminal</span></span>
+        <span class="state ok">✓ built</span></div>
+      <div class="row"><span class="n">9</span>
+        <span class="lbl"><b>Real mic</b><span class="sub">soldered MAX9814 front-end → live audio (demo mode until then)</span></span>
+        <span class="state next">→ next</span></div>
+      <div class="row"><span class="n">10</span>
         <span class="lbl"><b>Sound classifier</b><span class="sub">log-mel CNN naming speech / music / hum / clap</span></span>
         <span class="state stretch">stretch</span></div>
     </div>
@@ -350,15 +356,16 @@
           <b style="font-family:var(--mono);color:var(--text)">DSP</b> — numpy · scipy · matplotlib · sounddevice<br>
           <b style="font-family:var(--mono);color:var(--text)">LLM</b> — Ollama, GPU-accelerated on the Jetson<br>
           <b style="font-family:var(--mono);color:var(--text)">Model</b> — qwen2.5:3b (strong tool-calling)<br>
-          <b style="font-family:var(--mono);color:var(--text)">Chat</b> — Open WebUI, browser, renders the spectrogram</p>
+          <b style="font-family:var(--mono);color:var(--text)">Chat</b> — a reusable agent engine (agent_shell.py) served as a ttyd web terminal<br>
+          <b style="font-family:var(--mono);color:var(--text)">Deploy</b> — k3s on the Jetson, all on NVMe</p>
       </div>
       <div class="card">
         <h3>Integration: one HTTP tool service</h3>
-        <p style="margin-top:10px">The decided next build is a thin FastAPI service over the existing tools —
+        <p style="margin-top:10px">A thin FastAPI service over the tools —
           <span class="p" style="color:var(--accent)">POST /analyze</span>,
-          <span class="p" style="color:var(--accent)">POST /spectrum</span>, plus an OpenAPI schema.
-          Open WebUI calls it as an external tool server, and the <em>same</em> endpoint later powers
-          the NFC trigger, the container deploy, and a possible Go/vakit vertical.</p>
+          <span class="p" style="color:var(--accent)">POST /spectrum</span>. The terminal agent calls it,
+          and the <em>same</em> endpoint powers the NFC "tap-to-analyze" trigger and any future client —
+          no web UI in the loop.</p>
       </div>
     </div>
   </section>

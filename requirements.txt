@@ -3,3 +3,5 @@ numpy>=1.24
 scipy>=1.10
 matplotlib>=3.7
 ollama>=0.3          # Stage 4: local LLM tool-calling for agent.py
+fastapi>=0.110       # Stage 6: HTTP tool service (Open WebUI / NFC / clients)
+uvicorn>=0.29        # ASGI server for service.py

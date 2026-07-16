@@ -16,17 +16,17 @@ Page 1 = system architecture; Page 2 = options considered.
 ## The idea in one picture
 
 ```
-①  ANALOG FRONT-END              ②  JETSON ORIN NANO                 ③  CHAT UI
-   (solder / hardware)              (code · Mac-first)                  (browser)
+①  ANALOG FRONT-END              ②  JETSON · k3s (on NVMe)           ③  TERMINAL UI
+   (solder / hardware)              Ollama + DSP tool service           ttyd web terminal
 
-  Electret mic                     Stage 1  src/capture_test.py           Open WebUI
-      │                                │  record · VU meter               ▲
-  MAX9814 preamp                   Stage 2  src/spectrogram.py               │ chat +
-      │                                │  live FFT spectrogram            │ tool calls
-  Anti-alias RC filter             Stage 3  features.analyze() ──────────┘
-      │                                │      → JSON facts
-  3.5 mm jack                      Stage 4-5  Ollama + qwen2.5:3b
-      │                                        LLM tools over analyze()
+  Electret mic                     capture · spectrogram · features    ┌─[you] what's that noise?
+      │                            features.analyze() → JSON facts        ⚡ analyze_sound()
+  MAX9814 preamp                   qwen2.5:3b calls the tools ────────► └─[analyzer] 60 Hz hum…
+      │
+  Anti-alias RC filter             the agent (agent_shell.py) runs      open a browser to
+      │                            the Ollama tool-calling loop         http://<jetson>:30088
+  3.5 mm jack
+      │
   USB audio adapter ──USB ~44.1kHz──►
 ```
 
@@ -249,8 +249,12 @@ On the **Jetson later**, skip #10 — power from the Jetson's **5 V pin** on the
 - **LLM runtime:** [Ollama](https://ollama.com) (GPU-accelerated on the Jetson)
 - **Model:** `qwen2.5:3b` — chosen for strong **tool/function-calling**
   (drop to `llama3.2:1b` / `qwen2.5:1.5b` on a 4 GB board)
-- **Chat front-end:** [Open WebUI](https://openwebui.com) — browser chat with custom Python
-  tools; can render the spectrogram image a tool returns
+- **HTTP tool service:** FastAPI ([`src/service.py`](../src/service.py)) — `/analyze`, `/spectrum`
+- **Front-end:** a **reusable terminal-agent engine** ([`src/agent_shell.py`](../src/agent_shell.py))
+  — config + OpenAPI tool auto-discovery — served over the LAN as a
+  [ttyd](https://github.com/tsl0922/ttyd) web terminal (open a URL, get the agent; no web app).
+  Acoustic is just the first *vertical* ([`deploy/agents/`](../deploy/agents/))
+- **Orchestration:** [k3s](https://k3s.io) on the Jetson — see [DEPLOY-K3S.md](DEPLOY-K3S.md)
 
 ---
 
@@ -258,40 +262,67 @@ On the **Jetson later**, skip #10 — power from the Jetson's **5 V pin** on the
 
 | Stage | Track | What | Status |
 |-------|-------|------|--------|
-| 1 | hardware | Solder mic→MAX9814→filter→jack; verify capture | 🟢 code done ([src/capture_test.py](../src/capture_test.py)) |
-| 2 | software | FFT + live spectrogram | 🟢 code done ([src/spectrogram.py](../src/spectrogram.py)) |
-| 3 | software | Feature extractor → structured JSON | 🟢 code done ([src/features.py](../src/features.py)) |
-| 4 | software | Local LLM agent (Ollama + `qwen2.5:3b`) with tool-calling | 🟢 code done ([src/agent.py](../src/agent.py)) |
-| 5 | software | Wrap `features.analyze()` as LLM **tools** | 🟢 code done ([src/acoustic_tools.py](../src/acoustic_tools.py)) |
-| 6 | hardware | Enclosure + small log-mel CNN sound classifier | 🔴 stretch |
+| 1 | software | Capture + live FFT spectrogram | 🟢 done ([capture_test](../src/capture_test.py) · [spectrogram](../src/spectrogram.py)) |
+| 2 | software | Feature extractor → structured JSON | 🟢 done ([src/features.py](../src/features.py)) |
+| 3 | software | Local LLM agent (Ollama + `qwen2.5:3b`) tool-calling | 🟢 done ([src/agent.py](../src/agent.py)) |
+| 4 | software | Wrap `features.analyze()` as LLM **tools** | 🟢 done ([src/acoustic_tools.py](../src/acoustic_tools.py)) |
+| 5 | software | HTTP tool service (FastAPI `/analyze`, `/spectrum`) | 🟢 done ([src/service.py](../src/service.py)) |
+| 6 | deploy | **k3s on the Jetson** — Ollama + tools + terminal UI, on NVMe | 🟢 done ([deploy/k8s/](../deploy/k8s/)) |
+| 7 | deploy | **Reusable terminal-agent engine** (ttyd web terminal) | 🟢 done ([src/agent_shell.py](../src/agent_shell.py)) |
+| 8 | hardware | Solder the MAX9814 front-end → **live** audio | 🔴 pending board (demo mode now) |
+| 9 | software | `classify_sound()` — log-mel CNN | 🔴 stretch |
 
-**Built Stage-5 tools:** `capture_and_analyze()`, `get_spectrum_image()`, `list_input_devices()`.
-Verified end-to-end: `qwen2.5:3b` autonomously calls the tools and interprets the JSON facts.
-**Not yet built:** Open WebUI front-end (browser chat), `classify_sound()`.
+**Verified end-to-end:** `qwen2.5:3b` autonomously calls the tools and interprets the JSON facts,
+running as pods on k3s. The only thing standing between demo mode and live sound is the soldered mic.
 
 ---
 
 ## Current status & running it
 
-Stages 1–5 are coded and **runnable on the Mac today** (built-in mic; a `.venv` is set up,
-Ollama installed with `qwen2.5:3b` pulled). The identical files run on the Jetson later — the
-only change is `--device N` to select the USB audio adapter.
+**Deployed on the Jetson (k3s):** the full stack runs as pods — Ollama (GPU), the DSP tool
+service, and the agent as a **terminal UI** — all on the NVMe. Open a browser to
+`http://<jetson>:30088` and chat. Full runbook → **[DEPLOY-K3S.md](DEPLOY-K3S.md)**. Currently in
+**demo mode** (synthetic 60 Hz hum) until the mic is soldered.
 
+**Local dev** (Mac/PC, built-in mic) — the same code, no cluster:
 ```bash
 cd acoustic-analyzer
 ./.venv/bin/python src/capture_test.py            # talk — watch the level meter
-./.venv/bin/python src/spectrogram.py             # whistle — watch the spectrogram climb
-./.venv/bin/python src/features.py --seconds 2    # make a sound — see the JSON facts
 ./.venv/bin/python src/agent.py                   # chat: "what's that noise?" / "show me the spectrum"
 ```
 
-**Next up (in priority order):**
-1. A small **HTTP endpoint** over `capture_and_analyze()` — the linchpin that unlocks
-   Open WebUI, containerized Jetson deploy, the NFC/iPhone ideas below, *and* a future
-   vakit vertical (all call the same endpoint).
-2. **Open WebUI** browser front-end (renders the spectrogram inline).
-3. **Containerize for the Jetson** (see notes: GPU `runtime: nvidia`, `/dev/snd` mic passthrough).
-4. Stage 6 `classify_sound()` — log-mel CNN.
+**Next up:**
+1. **Solder the MAX9814 front-end**, plug the USB adapter into the Jetson, then flip
+   `ACOUSTIC_DEMO=0` + uncomment the `/dev/snd` passthrough → **live** audio (no other changes).
+2. `classify_sound()` — a log-mel CNN naming sounds (speech / music / hum / clap).
+3. The **NFC "tap-to-analyze"** idea below — it just calls the existing `/analyze` endpoint.
+
+### What to ask it
+
+In **demo mode** the input is always the same synthetic signal — a **60 Hz mains hum with
+120/180 Hz harmonics** — so every answer describes *that*. The point is to exercise the
+agent → tool loop and see the different facts each question pulls out. Two tools back all of
+this: **`analyze`** (returns the numbers) and **`spectrum`** (hands back the `/scope` link).
+
+| Ask it… | What the tool surfaces | Demo answer |
+|---|---|---|
+| *"What am I listening to?"* | the heuristic `label` | electrical hum (mains-related) |
+| *"How loud is it?"* | `rms_db` (loudness) | ~ −10 to −14 dB |
+| *"What's the dominant frequency?"* | `dominant_hz` | ≈ 60 Hz |
+| *"Is there any mains hum? 50 or 60 Hz?"* | `hum_60hz_score` | high — it's 60 Hz |
+| *"What tones or harmonics do you see?"* | `peaks_hz` | 60, 120, 180 Hz |
+| *"Which frequency band has the most energy?"* | `band_energy` (6 bands) | the bass / sub band |
+| *"Is this sound bright or dark?"* | `spectral_centroid_hz` | dark (low centroid) |
+| *"Is it tonal or noisy?"* | `zero_crossing_rate` + peaks | tonal (steady hum) |
+| *"Show me the spectrum"* / *"let me see it"* | `spectrum` → `/scope` URL | a browser link to the live waterfall |
+
+Chain them naturally too — *"how loud is it and is that hum?"*, or *"describe this sound and
+then show me the spectrum."* The last one is the fun one: it answers in the terminal **and**
+gives you a link to the magma spectrogram that a terminal can't draw.
+
+> Once the mic is soldered and `ACOUSTIC_DEMO=0`, the **same questions** work on **real
+> sound** — whistle, clap, hum a note, hold up a phone speaker — and the answers change with
+> what it actually hears.
 
 ---
 

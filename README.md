@@ -47,7 +47,7 @@ agent> That's 60 Hz mains hum with harmonics at 120 and 180 Hz — likely a grou
 ①  Analog front-end        ②  Jetson (DSP + LLM)           ③  Chat
    mic → MAX9814 →            capture → features.analyze()     "what's that noise?"
    RC filter → USB      →     → JSON facts → Ollama tools  →   plain-language answer
-   (you solder)              (Python, offline)                (terminal or browser)
+   (you solder)              (Python, offline)                (web terminal · ttyd)
 ```
 
 The LLM never touches raw audio — `features.analyze()` is the bridge that turns sound into the
@@ -96,7 +96,9 @@ OS-by-OS instructions (including the Windows/WSL caveats) are in
 | [`src/spectrogram.py`](src/spectrogram.py) | Live scrolling FFT spectrogram |
 | [`src/features.py`](src/features.py) | `analyze()` — turns audio into structured JSON facts |
 | [`src/acoustic_tools.py`](src/acoustic_tools.py) | LLM tools: `capture_and_analyze`, `get_spectrum_image`, `list_input_devices` |
-| [`src/agent.py`](src/agent.py) | Terminal chat — local LLM (Ollama) that calls the tools |
+| [`src/agent.py`](src/agent.py) | Terminal chat (local dev) — Ollama loop that calls the tools |
+| [`src/service.py`](src/service.py) | FastAPI HTTP tool service — `/analyze`, `/spectrum` (the deployed DSP API) |
+| [`src/agent_shell.py`](src/agent_shell.py) | Reusable terminal-agent engine — config + OpenAPI tool auto-discovery (the deployed front-end) |
 | [`requirements.txt`](requirements.txt) | Python dependencies |
 
 ## Documentation
@@ -106,6 +108,7 @@ OS-by-OS instructions (including the Windows/WSL caveats) are in
 | [docs/SETUP.md](docs/SETUP.md) | Install Ollama + the Python env, run the agent |
 | [docs/TEST-HARDWARE.md](docs/TEST-HARDWARE.md) | Test the soldered board on a Mac or Windows PC |
 | [docs/JETSON-SETUP.md](docs/JETSON-SETUP.md) | Bootstrap the Jetson Orin Nano (Apple-Silicon-friendly) |
+| [docs/DEPLOY-K3S.md](docs/DEPLOY-K3S.md) | Deploy the stack on k3s (Ollama + tool service + terminal UI, on NVMe) |
 | [docs/PROJECT.md](docs/PROJECT.md) | Full design, BOM, roadmap, and future ideas |
 | [docs/acoustic-wiring.svg](docs/acoustic-wiring.svg) | Pin-level solder map + checklist |
 
@@ -113,9 +116,10 @@ OS-by-OS instructions (including the Windows/WSL caveats) are in
 
 - [x] DSP pipeline — capture, spectrogram, feature extraction
 - [x] Local tool-calling agent (Ollama + `qwen2.5:3b`)
-- [ ] HTTP tool service (FastAPI over the tools)
-- [ ] Open WebUI browser front-end
-- [ ] Dockerized deploy on the Jetson (GPU + mic passthrough)
+- [x] HTTP tool service (FastAPI over the tools — `/analyze`, `/spectrum`)
+- [x] **Deployed on k3s** (Jetson · GPU · NVMe): Ollama + tool service + terminal UI
+- [x] **Terminal-UI front-end** (a `ttyd` web terminal — open a URL, get the agent)
+- [ ] Real mic (soldered MAX9814 front-end) — running in **demo mode** until then
 - [ ] Log-mel CNN sound classifier
 - [ ] NFC "tap-to-analyze" from an iPhone
 

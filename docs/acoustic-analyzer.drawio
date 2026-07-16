@@ -8,7 +8,7 @@
         <mxCell id="title" value="Acoustic Analyzer - a local edge-AI that hears and explains sound" style="text;html=1;align=center;fontSize=18;fontStyle=1;verticalAlign=middle;" vertex="1" parent="1">
           <mxGeometry x="40" y="20" width="890" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="subtitle" value="Jetson Orin Nano + Ollama qwen2.5:3b + Open WebUI -- the LLM never sees raw audio, only the JSON facts from features.analyze()" style="text;html=1;align=center;fontSize=12;fontStyle=2;fontColor=#666666;" vertex="1" parent="1">
+        <mxCell id="subtitle" value="Jetson Orin Nano + Ollama qwen2.5:3b + ttyd terminal -- the LLM never sees raw audio, only the JSON facts from features.analyze()" style="text;html=1;align=center;fontSize=12;fontStyle=2;fontColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="40" y="58" width="890" height="24" as="geometry" />
         </mxCell>
         <mxCell id="zoneA" value="1. ANALOG FRONT-END&#10;(hardware)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#B3B3B3;dashed=1;verticalAlign=top;fontStyle=1;fontSize=13;spacingTop=8;" vertex="1" parent="1">
@@ -50,7 +50,7 @@
         <mxCell id="notbuilt" value="not built yet" style="text;html=1;align=left;fontSize=10;fontStyle=2;fontColor=#b85450;" vertex="1" parent="1">
           <mxGeometry x="355" y="462" width="120" height="16" as="geometry" />
         </mxCell>
-        <mxCell id="webui" value="Open WebUI&#10;(browser chat, renders the&#10;spectrogram image)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
+        <mxCell id="webui" value="Terminal UI (ttyd)&#10;(web terminal REPL,&#10;served over the LAN)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;dashed=1;" vertex="1" parent="1">
           <mxGeometry x="710" y="150" width="190" height="60" as="geometry" />
         </mxCell>
         <mxCell id="bubble" value="&quot;What's that noise?&quot;&#10;&#10;-&gt; records 2 s, analyzes&#10;-&gt; { dominant: 60 Hz,&#10;     harmonics: 120/180 Hz,&#10;     label: 'mains hum' }&#10;&#10;LLM: &quot;That's 60 Hz mains hum -&#10;likely a ground loop. Here is&#10;the spectrum.&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacingLeft=8;verticalAlign=top;spacingTop=6;" vertex="1" parent="1">

@@ -227,17 +227,52 @@ arecord -l                     # find the USB adapter's card number
 arecord -d 3 -f cd /tmp/t.wav && aplay /tmp/t.wav   # record + play back
 ```
 
-### 5d · The project
-Get the folder onto the Jetson via `git clone`, or `scp` from your Mac
-(`scp -r ./acoustic-analyzer <user>@<jetson-ip>:~/`), then:
+### 5d · Run the project in Docker (no host Python)
+We keep the host clean — **no system Python packages**. The app runs in a container that does CPU
+signal processing and calls the **host's Ollama** over HTTP (Ollama stays on the host from §5a,
+GPU-accelerated). The app itself needs no CUDA, so a **slim Python base** is enough; it just needs the
+PortAudio/libsndfile *runtime* libs and access to the mic.
+
+Get the folder onto the Jetson (from your Mac, or `git clone`):
 ```bash
-sudo apt install -y python3-venv portaudio19-dev libsndfile1   # sounddevice needs PortAudio
-cd ~/acoustic-analyzer
-python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
-./.venv/bin/python src/capture_test.py --list      # find the USB adapter's index N
-./.venv/bin/python src/agent.py                     # "what's that noise?"
+scp -r ./acoustic-analyzer <user>@<jetson-ip>:~/
 ```
-The code is identical to the Mac — you just pass `--device N` for the USB card.
+
+Create `Dockerfile` in the repo root:
+```dockerfile
+FROM python:3.11-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libportaudio2 libsndfile1 alsa-utils \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY src/ ./src/
+CMD ["python", "src/service.py"]        # Stage 6 HTTP tool service
+```
+> Runtime libs only — `libportaudio2`/`libsndfile1`, **not** the `-dev` packages. `sounddevice` is
+> pure-Python (cffi) and loads PortAudio at runtime, so nothing compiles. Wheels are multi-arch, so
+> this same Dockerfile builds on the Mac and the Jetson (arm64).
+
+Build and run:
+```bash
+cd ~/acoustic-analyzer
+docker build -t acoustic-analyzer .
+docker run --rm -it \
+  --network host \                       # reach the host's Ollama at localhost:11434
+  --device /dev/snd --group-add audio \  # USB mic access (ALSA)
+  -e OLLAMA_HOST=http://localhost:11434 \
+  acoustic-analyzer
+```
+- **`--network host`** lets the container hit the host's Ollama directly (simplest on Linux); the
+  `OLLAMA_HOST` env then points the client at it.
+- **`--device /dev/snd --group-add audio`** exposes the USB audio adapter; without both, the mic is silent.
+- Interactive CLI instead of the service? Swap the command:
+  `docker run --rm -it --network host --device /dev/snd --group-add audio acoustic-analyzer python src/agent.py`
+
+> **Deploying the full app:** the whole stack (Ollama + DSP tool service + the terminal UI) runs
+> on **k3s** — see **[DEPLOY-K3S.md](DEPLOY-K3S.md)**. The single-container `docker run` above is
+> just a quick end-to-end validation.
 
 ---
 
@@ -267,8 +302,8 @@ SD-free NVMe boot requires a one-time x86 host flash.)
 - `ls /mnt/nvme/ollama/blobs` → model blobs are on the NVMe.
 - `ollama run qwen2.5:3b "hello"` → responds; `jtop` shows a GPU spike.
 - `ssh <user>@<static-ip>` from the Mac → lands at the console (static IP + SSH working).
-- `arecord -l` → USB audio adapter listed.
-- `./.venv/bin/python src/agent.py` → tool fires, it explains a sound.
+- `arecord -l` → USB audio adapter listed (on the host).
+- `docker build -t acoustic-analyzer .` → image builds; `docker run … python src/agent.py` → tool fires, it explains a sound.
 
 ---
 
@@ -299,9 +334,9 @@ Alternative: borrow an x86 Ubuntu PC once and run SDK Manager (also enables pure
 - **Enable SSH *before* going console-only** — or a failed SSH strands you.
 - **Static IP drops your SSH session** on apply — reconnect at the new address (expected).
 - **Don't unplug the WiFi antennas** — the MHF4 connectors are fragile and pre-seated from the factory.
-- **`sounddevice` import errors** → install `portaudio19-dev`, then re-`pip install`.
+- **Keep host clean — no host Python** → the app runs in Docker (§5d); don't `apt install` python/pip on the host.
+- **Container mic is silent** → the `docker run` needs **both** `--device /dev/snd` **and** `--group-add audio`.
+- **Container can't reach Ollama** → run with `--network host` and set `-e OLLAMA_HOST=http://localhost:11434` (Ollama lives on the host, §5a).
+- **`sounddevice`/PortAudio errors in the image** → the Dockerfile must install `libportaudio2` + `libsndfile1` (runtime libs).
 - **Ollama on CPU only** → confirm `nvidia-jetpack` is installed; watch `jtop` during a run.
 - **Ollama models filling the SD card** → confirm the `OLLAMA_MODELS` drop-in (§5a) and that blobs are under `/mnt/nvme/ollama`.
-- **Later, in containers** → pass `--device /dev/snd` and add the container to the `audio` group, or the mic is silent.
-</content>
-</invoke>

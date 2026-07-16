@@ -165,9 +165,42 @@ print(json.dumps(T.capture_and_analyze(wav_path='/tmp/h.wav'), indent=2))"
 
 ---
 
-## What's next (not yet built)
+## 6 · HTTP tool service ([`src/service.py`](../src/service.py))
 
-- **HTTP tool service** (FastAPI over the tools) — the linchpin for Open WebUI, the NFC trigger,
-  and containers. See [PROJECT.md](PROJECT.md) → "Next up".
-- **Open WebUI** browser front-end.
-- **Docker Compose** deploy on the Jetson (GPU runtime + `/dev/snd` mic passthrough).
+`src/service.py` is a FastAPI app exposing the DSP tools over HTTP — `/analyze`, `/spectrum`,
+`/healthz` — so the agent (or an NFC Shortcut, or any client) can call them. It works **without a
+microphone**: set `ACOUSTIC_DEMO=1` and calls fall back to a synthetic 60 Hz hum, so you can test
+the whole loop before the board is soldered.
+
+**Run it locally** (from the repo root):
+```bash
+PYTHONPATH=src ACOUSTIC_DEMO=1 ./.venv/bin/uvicorn service:app --host 0.0.0.0 --port 8000
+curl -s localhost:8000/healthz
+curl -s -X POST localhost:8000/analyze -H 'Content-Type: application/json' -d '{"seconds":2}'
+```
+(Interactive docs at `http://localhost:8000/docs`.)
+
+## 7 · The chat front-end ([`src/agent_shell.py`](../src/agent_shell.py))
+
+The front-end is a **reusable terminal-agent engine** — `src/agent_shell.py` auto-discovers tools
+from any OpenAPI service, runs the Ollama tool-calling loop, and prints a styled REPL. Nothing in
+it is acoustic-specific; a *vertical* supplies only config — a banner, a system prompt, and the
+tool-service URLs. Run the **acoustic vertical** locally:
+```bash
+PYTHONPATH=src AGENT_NAME="Acoustic Analyzer" \
+  TOOL_SERVERS=http://localhost:8000 OLLAMA_HOST=http://localhost:11434 \
+  SYSTEM_PROMPT_FILE=deploy/agents/acoustic.prompt \
+  ./.venv/bin/python src/agent_shell.py
+```
+
+On the Jetson it's deployed on **k3s** and served over the LAN as a `ttyd` **web terminal** —
+open `http://<jetson>:30088` in any browser and you get this exact TUI. Full deploy → **[DEPLOY-K3S.md](DEPLOY-K3S.md)**.
+
+**A new vertical is ~5 lines:** write a tool service (any FastAPI app with `/openapi.json`), drop a
+`system.prompt`, copy `deploy/k8s/acoustic-chat.yaml` and change `AGENT_NAME` / `TOOL_SERVERS` /
+the prompt ConfigMap / the NodePort — same engine, same UI, your tools.
+
+## What's next
+
+- **Solder the mic** → flip `ACOUSTIC_DEMO=0` + add the `/dev/snd` passthrough for **live** audio.
+- **`classify_sound()`** — a log-mel CNN naming sounds.
