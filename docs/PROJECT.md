@@ -297,32 +297,61 @@ cd acoustic-analyzer
 2. `classify_sound()` — a log-mel CNN naming sounds (speech / music / hum / clap).
 3. The **NFC "tap-to-analyze"** idea below — it just calls the existing `/analyze` endpoint.
 
-### What to ask it
+### What to ask it — testing while the hardware is still on the bench
 
-In **demo mode** the input is always the same synthetic signal — a **60 Hz mains hum with
-120/180 Hz harmonics** — so every answer describes *that*. The point is to exercise the
-agent → tool loop and see the different facts each question pulls out. Two tools back all of
-this: **`analyze`** (returns the numbers) and **`spectrum`** (hands back the `/scope` link).
+Open the terminal at `http://<jetson>:30088`. It greets you with a **numbered pick-list** — type
+a number to run that question, type your own, or `?` to show the list again.
 
-| Ask it… | What the tool surfaces | Demo answer |
+In **demo mode** there is no mic, so the input is always the same synthetic signal: a **60 Hz
+mains hum with 120/180 Hz harmonics**, plus a **slowly drifting ~300–1300 Hz tone** and a faint
+broadband hiss (both added so the spectrogram has something to show). Every answer describes
+*that* — the point is to exercise the agent → tool loop and see which fact each question pulls.
+
+Three tools back all of it: **`analyze`** (quick ~2 s listen), **`capture`** (record N seconds and
+*remember* the clip), and **`spectrum`** (hands back a `/scope` link).
+
+**The flow worth testing** — capture once, then interrogate that same clip:
+
+```
+┌─[you] capture the next 10 seconds     → records, analyzes, reports what it heard
+┌─[you] was there any hum?              → answered from the SAME clip — it does NOT re-record
+┌─[you] show me the spectrum            → frozen view of that exact 10 s: /scope?clip=1
+```
+
+That's the design: `capture` returns the whole fact set at once, so follow-ups are answered from
+what it already has. Every question refers to the same audio until you capture again.
+
+| Ask it… | What it surfaces | Demo answer today |
 |---|---|---|
-| *"What am I listening to?"* | the heuristic `label` | electrical hum (mains-related) |
-| *"How loud is it?"* | `rms_db` (loudness) | ~ −10 to −14 dB |
-| *"What's the dominant frequency?"* | `dominant_hz` | ≈ 60 Hz |
-| *"Is there any mains hum? 50 or 60 Hz?"* | `hum_60hz_score` | high — it's 60 Hz |
-| *"What tones or harmonics do you see?"* | `peaks_hz` | 60, 120, 180 Hz |
-| *"Which frequency band has the most energy?"* | `band_energy` (6 bands) | the bass / sub band |
-| *"Is this sound bright or dark?"* | `spectral_centroid_hz` | dark (low centroid) |
-| *"Is it tonal or noisy?"* | `zero_crossing_rate` + peaks | tonal (steady hum) |
-| *"Show me the spectrum"* / *"let me see it"* | `spectrum` → `/scope` URL | a browser link to the live waterfall |
+| *"What am I listening to?"* | `label` | electrical hum (mains-related) |
+| *"How loud is it?"* | `rms_db` | ≈ −12 dB |
+| *"What's the dominant frequency?"* | `dominant_hz` | 60 Hz |
+| *"Is there mains hum? 50 or 60 Hz?"* | `hum_60hz_score` | 0.94 — strongly 60 Hz |
+| *"What tones or harmonics do you see?"* | `peaks_hz` | 60, 120, 180 Hz + a drifting ~530 Hz tone |
+| *"Which frequency band has the most energy?"* | `band_energy` (6 bands) | `bass_60_250` — by ~7× |
+| *"Is it tonal or noisy?"* | `zero_crossing_rate` | 0.02 — very tonal |
+| *"Is this sound bright or dark?"* | `spectral_centroid_hz` | ≈ 9.9 kHz — reads *bright* (see note) |
+| *"Show me the spectrum"* | `spectrum` → URL | link to the spectrogram |
 
-Chain them naturally too — *"how loud is it and is that hum?"*, or *"describe this sound and
-then show me the spectrum."* The last one is the fun one: it answers in the terminal **and**
-gives you a link to the magma spectrogram that a terminal can't draw.
+> **Note on the centroid:** ≈9.9 kHz looks wrong for a 60 Hz hum, and it's a demo artifact — the
+> faint hiss added for the waterfall spreads a little energy across the whole band and drags the
+> centroid up, even though the hum holds ~all the actual energy (see `band_energy`). A real hum
+> alone reads far darker. A good illustration of why one number never tells the whole story.
 
-> Once the mic is soldered and `ACOUSTIC_DEMO=0`, the **same questions** work on **real
-> sound** — whistle, clap, hum a note, hold up a phone speaker — and the answers change with
-> what it actually hears.
+Two more things to try:
+- **Chain questions** — *"how loud is it and is that hum?"*, or *"describe this sound and then
+  show me the spectrum"* (answers in the terminal **and** hands you the visual).
+- **Switch models live** — `model` lists what Ollama has, `model 7b` switches, and the
+  conversation is kept, so you can ask the *same* question of two models back-to-back.
+
+Also worth opening on its own: **`http://<jetson>:30800/scope`** — the live scrolling waterfall
+(no capture needed). You'll see the steady hum bands at the bottom and the drift tone snaking
+through the middle.
+
+> Once the mic is soldered and `ACOUSTIC_DEMO=0`, the **same questions** work on **real sound** —
+> whistle, clap, hum a note, hold up a phone speaker — and the answers finally change with what it
+> actually hears. That's when `capture the next 10 seconds` earns its keep: run the motor, then
+> ask what it heard and freeze the spectrogram of that exact moment.
 
 ---
 

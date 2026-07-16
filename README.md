@@ -79,7 +79,36 @@ python3 -m venv .venv
 #    you> show me the spectrum        (saves spectrum.png)
 ```
 
-Full walkthrough and troubleshooting → **[docs/SETUP.md](docs/SETUP.md)**.
+### Configuration
+
+| What | How |
+|------|-----|
+| **Model** | `--model <name>` on `src/agent.py` (default `qwen2.5:3b`) |
+| **Mic / input device** | `--device N` (find N via `src/capture_test.py --list`) |
+| **Ollama location** | defaults to `http://localhost:11434`; set `OLLAMA_HOST` for a remote or containerized Ollama |
+
+### The tool service + terminal agent, locally (no mic needed)
+
+[`src/service.py`](src/service.py) exposes the DSP over HTTP — `/analyze`, `/capture`, `/spectrum`.
+With `ACOUSTIC_DEMO=1` it falls back to a synthetic 60 Hz hum, so you can exercise the whole loop
+before the board is soldered:
+
+```bash
+PYTHONPATH=src ACOUSTIC_DEMO=1 ./.venv/bin/uvicorn service:app --host 0.0.0.0 --port 8000
+curl -s localhost:8000/healthz
+curl -s -X POST localhost:8000/capture -H 'Content-Type: application/json' -d '{"seconds":5}'
+open http://localhost:8000/scope        # live scrolling spectrogram
+```
+
+Then point the reusable terminal agent at it — the same UI you get on the Jetson:
+
+```bash
+PYTHONPATH=src AGENT_NAME="Acoustic Analyzer" \
+  TOOL_SERVERS=http://localhost:8000 OLLAMA_HOST=http://localhost:11434 \
+  SYSTEM_PROMPT_FILE=deploy/agents/acoustic.prompt \
+  SUGGESTIONS_FILE=deploy/agents/acoustic.suggestions \
+  ./.venv/bin/python src/agent_shell.py
+```
 
 ## Testing the soldered hardware (no Jetson needed)
 
@@ -105,12 +134,29 @@ OS-by-OS instructions (including the Windows/WSL caveats) are in
 
 | Doc | Contents |
 |-----|----------|
-| [docs/SETUP.md](docs/SETUP.md) | Install Ollama + the Python env, run the agent |
-| [docs/TEST-HARDWARE.md](docs/TEST-HARDWARE.md) | Test the soldered board on a Mac or Windows PC |
+| [docs/PROJECT.md](docs/PROJECT.md) | Full design, soldering, BOM, what to ask it, roadmap, future ideas |
+| [docs/TEST-HARDWARE.md](docs/TEST-HARDWARE.md) | Test the soldered board on a Mac or Windows PC (no Jetson) |
 | [docs/JETSON-SETUP.md](docs/JETSON-SETUP.md) | Bootstrap the Jetson Orin Nano (Apple-Silicon-friendly) |
 | [docs/DEPLOY-K3S.md](docs/DEPLOY-K3S.md) | Deploy the stack on k3s (Ollama + tool service + terminal UI, on NVMe) |
-| [docs/PROJECT.md](docs/PROJECT.md) | Full design, BOM, roadmap, and future ideas |
 | [docs/acoustic-wiring.svg](docs/acoustic-wiring.svg) | Pin-level solder map + checklist |
+
+## Troubleshooting
+
+- **`connection refused` / agent hangs** → Ollama isn't running. Start it (`ollama serve` on Mac,
+  or `sudo systemctl status ollama` on Linux) and confirm `curl localhost:11434/api/tags`.
+- **`model not found`** → `ollama pull qwen2.5:3b` (or match the `--model` you passed). In the
+  deployed TUI, type `model` to list what Ollama actually has and switch.
+- **`sounddevice`/PortAudio import error** → macOS: `pip install sounddevice` again; Linux/Jetson:
+  install `portaudio19-dev`, then reinstall.
+- **No sound / flat level meter** → wrong input device; run `src/capture_test.py --list` and pass
+  `--device N`. On macOS grant mic permission when prompted.
+- **No microphone found on the Jetson** → the USB audio adapter provides the mic input (the Jetson
+  has none). Check `arecord -l` on the host: a capture device appears as `pcmC?D?c` (`c` = capture).
+  See [docs/PROJECT.md](docs/PROJECT.md) for why.
+- **Model calls no tool / rambles** → small models are weak at tool-calling; keep prompts direct
+  ("what's that noise?"). `qwen2.5:3b` is the floor — `qwen2.5:7b` follows instructions better.
+- **Slow on Jetson** → ensure `nvidia-jetpack` is installed and `jtop` shows GPU use; set
+  `sudo nvpmodel -m 0 && sudo jetson_clocks`.
 
 ## Roadmap
 

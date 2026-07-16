@@ -210,69 +210,18 @@ ollama run qwen2.5:3b "hello"     # responds; watch jtop for a GPU spike
 ```
 > Low on RAM (4 GB Jetson)? Use `qwen2.5:1.5b`.
 
-### 5b · Docker + NVIDIA default runtime (for the later compose deploy)
-```bash
-sudo usermod -aG docker $USER        # log out/in after
-sudo tee /etc/docker/daemon.json >/dev/null <<'EOF'
-{ "default-runtime": "nvidia",
-  "runtimes": { "nvidia": { "path": "nvidia-container-runtime", "runtimeArgs": [] } } }
-EOF
-sudo systemctl restart docker
-```
-
-### 5c · Audio front-end
+### 5b · Audio front-end
 Plug the **USB-A** audio adapter (fed by the soldered MAX9814 board) into a USB-A port:
 ```bash
 arecord -l                     # find the USB adapter's card number
 arecord -d 3 -f cd /tmp/t.wav && aplay /tmp/t.wav   # record + play back
 ```
 
-### 5d · Run the project in Docker (no host Python)
-We keep the host clean — **no system Python packages**. The app runs in a container that does CPU
-signal processing and calls the **host's Ollama** over HTTP (Ollama stays on the host from §5a,
-GPU-accelerated). The app itself needs no CUDA, so a **slim Python base** is enough; it just needs the
-PortAudio/libsndfile *runtime* libs and access to the mic.
+### 5c · Deploy the stack
 
-Get the folder onto the Jetson (from your Mac, or `git clone`):
-```bash
-scp -r ./acoustic-analyzer <user>@<jetson-ip>:~/
-```
-
-Create `Dockerfile` in the repo root:
-```dockerfile
-FROM python:3.11-slim
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        libportaudio2 libsndfile1 alsa-utils \
-    && rm -rf /var/lib/apt/lists/*
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY src/ ./src/
-CMD ["python", "src/service.py"]        # Stage 6 HTTP tool service
-```
-> Runtime libs only — `libportaudio2`/`libsndfile1`, **not** the `-dev` packages. `sounddevice` is
-> pure-Python (cffi) and loads PortAudio at runtime, so nothing compiles. Wheels are multi-arch, so
-> this same Dockerfile builds on the Mac and the Jetson (arm64).
-
-Build and run:
-```bash
-cd ~/acoustic-analyzer
-docker build -t acoustic-analyzer .
-docker run --rm -it \
-  --network host \                       # reach the host's Ollama at localhost:11434
-  --device /dev/snd --group-add audio \  # USB mic access (ALSA)
-  -e OLLAMA_HOST=http://localhost:11434 \
-  acoustic-analyzer
-```
-- **`--network host`** lets the container hit the host's Ollama directly (simplest on Linux); the
-  `OLLAMA_HOST` env then points the client at it.
-- **`--device /dev/snd --group-add audio`** exposes the USB audio adapter; without both, the mic is silent.
-- Interactive CLI instead of the service? Swap the command:
-  `docker run --rm -it --network host --device /dev/snd --group-add audio acoustic-analyzer python src/agent.py`
-
-> **Deploying the full app:** the whole stack (Ollama + DSP tool service + the terminal UI) runs
-> on **k3s** — see **[DEPLOY-K3S.md](DEPLOY-K3S.md)**. The single-container `docker run` above is
-> just a quick end-to-end validation.
+The whole stack — Ollama (GPU), the DSP tool service, and the terminal UI — runs on **k3s**, with
+images built and pushed without sudo via an in-cluster registry. Full runbook →
+**[DEPLOY-K3S.md](DEPLOY-K3S.md)**.
 
 ---
 
