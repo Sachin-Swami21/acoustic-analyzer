@@ -26,13 +26,13 @@ spec:
             httpGet: { path: /healthz, port: 8000 }
             initialDelaySeconds: 5
           # --- mic passthrough: uncomment when the USB audio adapter is plugged in ---
-          # securityContext:
-          #   privileged: true
-          # volumeMounts:
-          #   - { name: snd, mountPath: /dev/snd }
-      # volumes:
-      #   - name: snd
-      #     hostPath: { path: /dev/snd }
+          securityContext:
+             privileged: true
+          volumeMounts:
+             - { name: snd, mountPath: /dev/snd }
+      volumes:
+         - name: snd
+           hostPath: { path: /dev/snd }
 ---
 apiVersion: v1
 kind: Service
