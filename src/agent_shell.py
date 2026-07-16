@@ -5,7 +5,7 @@ Nothing here is domain-specific. A "vertical" supplies only config:
 
   AGENT_NAME         banner title            (default "Agent")
   AGENT_SUB          banner subtitle
-  MODEL              ollama model            (default qwen2.5:3b)
+  MODEL              ollama model to start with (default qwen2.5:3b) — switch live with 'model'
   OLLAMA_HOST        ollama endpoint         (default http://ollama.acoustic:11434)
   TOOL_SERVERS       comma-separated base URLs of OpenAPI tool services
                      (each must serve <url>/openapi.json)
@@ -162,8 +162,32 @@ def banner(n_tools):
    └────────────────────────────────────────────────────────┘{R}
    {GY}model{R} {MODEL}   {GY}ollama{R} {OLLAMA_HOST}
    {GY}tools{R} {n_tools} discovered from {', '.join(TOOL_SERVERS) or '(none)'}
-   {D}pick a number below, ask your own · '?' for the list · 'quit' to exit{R}
+   {D}pick a number below, ask your own · '?' list · 'model' to switch · 'quit' to exit{R}
 """)
+
+
+def list_models(client):
+    """Names of the models Ollama actually has pulled (tolerant of ollama-python versions)."""
+    def _name(m):
+        if isinstance(m, dict):
+            return m.get("model") or m.get("name")
+        return getattr(m, "model", None) or getattr(m, "name", None)
+    try:
+        resp = client.list()
+        items = resp.get("models", []) if isinstance(resp, dict) else getattr(resp, "models", [])
+        return sorted(n for n in (_name(m) for m in items) if n)
+    except Exception:
+        return []
+
+
+def show_models(models, cur):
+    if not models:
+        print(c("  ! no models found on the ollama host", RD) + "\n")
+        return
+    print(c("  models:", D))
+    for i, m in enumerate(models, 1):
+        print("   " + c(str(i), YL) + c(" · ", GY) + m + (c("  ← current", CY) if m == cur else ""))
+    print(c("  switch with:  model <number|name>", D) + "\n")
 
 
 def show_suggestions(sugg):
@@ -209,15 +233,44 @@ def brief(result):
     return result[:70]
 
 
-def _plain(text):
-    """Unwrap markdown links/images the model likes to emit — a terminal wants a bare URL.
-    ![alt](url) -> url ;  [label](url) -> label (url) ;  [url](url) -> url."""
+_URL_KEYS = ("view_url", "spectrum_url", "url")
+
+
+def collect_urls(result, allowed):
+    """Remember the links a REAL tool call returned — the only ones we'll ever show the user."""
+    try:
+        d = json.loads(result)
+        if isinstance(d, dict):
+            for k in _URL_KEYS:
+                v = d.get(k)
+                if isinstance(v, str) and v.strip():
+                    allowed.add(v.strip())
+    except Exception:
+        pass
+    for u in re.findall(r"https?://[^\s\"')>\]]+", result or ""):
+        allowed.add(u)
+
+
+def _plain(text, allowed=()):
+    """Render the model's reply for a terminal, and refuse to print links it made up.
+
+    Small models fabricate URLs (a fake /spectrogram, or an internal path dressed as a signed
+    URL). Only links a tool actually returned are allowed through; everything else is dropped,
+    so a hallucinated link can never reach the user regardless of the model."""
     text = (text or "").strip()
-    text = re.sub(r"!\[[^\]]*\]\((\S+?)\)", r"\1", text)                         # image -> url
-    text = re.sub(r"\[([^\]]+)\]\((\S+?)\)",
-                  lambda m: m.group(2) if m.group(1) == m.group(2) else f"{m.group(1)} ({m.group(2)})",
-                  text)                                                          # link -> label (url)
-    return text
+    ok = lambda u: u.strip() in allowed
+
+    # markdown image / link — keep it only if the target came from a tool
+    text = re.sub(r"!\[([^\]]*)\]\(([^)\s]+)\)",
+                  lambda m: m.group(2) if ok(m.group(2)) else "", text)
+    text = re.sub(r"\[([^\]]+)\]\(([^)\s]+)\)",
+                  lambda m: (m.group(2) if m.group(1) == m.group(2) else f"{m.group(1)} ({m.group(2)})")
+                  if ok(m.group(2)) else m.group(1), text)
+    # bare URLs no tool returned, and internal filesystem paths, must never surface
+    text = re.sub(r"https?://[^\s\"')>\]]+",
+                  lambda m: m.group(0) if ok(m.group(0)) else "[link removed — not from a tool]", text)
+    text = re.sub(r"(?<![\w])/(?:tmp|var|home|root|app|etc)/\S+", "[internal path removed]", text)
+    return re.sub(r"[ \t]{2,}", " ", text).strip()
 
 
 def main():
@@ -226,7 +279,13 @@ def main():
     banner(len(tools))
     sugg = _suggestions()
     show_suggestions(sugg)
+    current = MODEL
+    models = list_models(client)
+    if models and current not in models:      # e.g. the configured model was never pulled
+        print(c(f"  ! {current} is not on the ollama host — 'model' to pick one of: "
+                f"{', '.join(models)}", RD) + "\n")
     messages = [{"role": "system", "content": _system_prompt()}]
+    allowed_urls = set()          # links real tool calls returned — the only printable ones
 
     while True:
         try:
@@ -238,7 +297,22 @@ def main():
         if user.lower() in ("quit", "exit", "q"):
             print(c("bye ∿", GY)); return
         if user in ("?", "menu", "help", "h"):
-            show_suggestions(sugg); continue
+            show_suggestions(sugg); show_models(models, current); continue
+        if user.split()[0].lstrip("/").lower() == "model":       # switch model live
+            arg = user.split(maxsplit=1)[1].strip() if len(user.split(maxsplit=1)) > 1 else ""
+            models = list_models(client) or models
+            if not arg:
+                show_models(models, current); continue
+            hits = [m for m in models if arg in m]               # number, exact, or substring ("7b")
+            pick = (models[int(arg) - 1] if arg.isdigit() and 1 <= int(arg) <= len(models)
+                    else arg if arg in models
+                    else hits[0] if len(hits) == 1 else None)
+            if pick:
+                current = pick
+                print(c(f"  → model: {current}", CY) + c("  (conversation kept)", D) + "\n")
+            else:
+                print(c(f"  ! no single match for '{arg}'", RD)); show_models(models, current)
+            continue
         if user.isdigit() and 1 <= int(user) <= len(sugg):   # a picked suggestion
             user = sugg[int(user) - 1]
             print(c("  → ", GY) + c(user, CY))
@@ -246,7 +320,7 @@ def main():
         messages.append({"role": "user", "content": user})
         while True:
             with Spinner("thinking…"):
-                resp = client.chat(model=MODEL, messages=messages, tools=tools or None)
+                resp = client.chat(model=current, messages=messages, tools=tools or None)
             msg = resp.message
             messages.append(msg)
             if msg.tool_calls:
@@ -256,13 +330,15 @@ def main():
                     print(c(f"  ⚡ {tc.function.name}({shown})", YL))
                     try:
                         result = run_tool(tc.function.name, args, dispatch)
+                        collect_urls(result, allowed_urls)      # these links are now printable
                         print(c(f"  ↳ {brief(result)}", GY))
                     except Exception as e:
                         result = json.dumps({"error": str(e)})
                         print(c(f"  ↳ error: {e}", RD))
                     messages.append({"role": "tool", "content": result})
                 continue
-            print(c("└─[", GY) + c(NAME.split()[0].lower(), MG) + c("] ", GY) + _plain(msg.content) + "\n")
+            print(c("└─[", GY) + c(NAME.split()[0].lower(), MG) + c("] ", GY)
+                  + _plain(msg.content, allowed_urls) + "\n")
             break
 
 

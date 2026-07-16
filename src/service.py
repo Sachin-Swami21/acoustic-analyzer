@@ -99,7 +99,12 @@ def analyze(req: AudioReq):
     loudness (rms_db), dominant frequency, tonal peaks, spectral centroid, a 60 Hz mains-hum
     score, per-band energy, and a heuristic label. Call this to answer what a sound is, how
     loud it is, whether there is hum, or what frequency something is."""
-    return T.capture_and_analyze(seconds=req.seconds, wav_path=_source(req.wav_path))
+    facts = T.capture_and_analyze(seconds=req.seconds, wav_path=_source(req.wav_path))
+    # Never hand the model an internal filesystem path: it will happily serve it back to the user
+    # as if it were a shareable link. Report the source in words instead.
+    if "source" in facts:
+        facts["source"] = "demo signal" if DEMO else "microphone"
+    return facts
 
 
 @app.post("/capture", summary="Capture a set number of seconds of sound, then analyze it")
