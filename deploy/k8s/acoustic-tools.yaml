@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: acoustic-tools
+  namespace: acoustic
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: acoustic-tools }
+  template:
+    metadata:
+      labels: { app: acoustic-tools }
+    spec:
+      containers:
+        - name: acoustic-tools
+          image: sachin-jetson.local:30500/acoustic-tools:latest   # from the in-cluster registry
+          imagePullPolicy: Always                                  # re-pull on every restart
+          ports:
+            - containerPort: 8000
+          env:
+            - name: ACOUSTIC_DEMO
+              value: "1"                    # no mic yet -> synthetic signal. Set "0" once wired.
+            - name: PUBLIC_URL
+              value: "http://sachin-jetson.local:30800"   # so /spectrum hands back a browser-openable /scope link
+          readinessProbe:
+            httpGet: { path: /healthz, port: 8000 }
+            initialDelaySeconds: 5
+          # --- mic passthrough: uncomment when the USB audio adapter is plugged in ---
+          # securityContext:
+          #   privileged: true
+          # volumeMounts:
+          #   - { name: snd, mountPath: /dev/snd }
+      # volumes:
+      #   - name: snd
+      #     hostPath: { path: /dev/snd }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: acoustic-tools
+  namespace: acoustic
+spec:
+  type: NodePort
+  selector: { app: acoustic-tools }
+  ports:
+    - port: 8000
+      targetPort: 8000
+      nodePort: 30800     # LAN-reachable at http://sachin-jetson.local:30800 (browser can resolve this)

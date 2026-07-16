@@ -1,0 +1,7 @@
+# Starter questions shown in the Acoustic Analyzer TUI pick-list (one per line, max 9).
+what do I hear right now?
+capture the next 10 seconds
+was there any hum?
+what is the dominant frequency?
+which frequency band has the most energy?
+show me the spectrum

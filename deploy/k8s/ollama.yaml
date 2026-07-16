@@ -1,0 +1,65 @@
+# NVIDIA RuntimeClass — lets pods use the Jetson GPU via the nvidia container runtime.
+# k3s auto-detects nvidia-container-runtime (from JetPack) and wires it into containerd;
+# this object lets a pod select it. Applying when it already exists is a harmless no-op.
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: nvidia
+handler: nvidia
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-models
+  namespace: acoustic
+spec:
+  accessModes: [ ReadWriteOnce ]
+  storageClassName: local-path        # k3s default; lands on the NVMe (see DEPLOY-K3S.md)
+  resources:
+    requests:
+      storage: 20Gi                   # room for several models (~2-5 GB each)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: acoustic
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: ollama }
+  template:
+    metadata:
+      labels: { app: ollama }
+    spec:
+      runtimeClassName: nvidia        # <-- Jetson GPU
+      containers:
+        - name: ollama
+          image: ollama/ollama:latest # GPU not used on Jetson? switch to: dustynv/ollama:latest
+          ports:
+            - containerPort: 11434
+          env:
+            - { name: OLLAMA_HOST, value: "0.0.0.0" }            # listen for in-cluster clients
+            - { name: NVIDIA_VISIBLE_DEVICES, value: "all" }     # expose the iGPU
+            - { name: NVIDIA_DRIVER_CAPABILITIES, value: "all" }
+          volumeMounts:
+            - { name: models, mountPath: /root/.ollama }
+          readinessProbe:
+            httpGet: { path: /, port: 11434 }
+            initialDelaySeconds: 5
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: ollama-models
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+  namespace: acoustic
+spec:
+  selector: { app: ollama }
+  ports:
+    - port: 11434
+      targetPort: 11434
+  # in-cluster address: http://ollama.acoustic:11434

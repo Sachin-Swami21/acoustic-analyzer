@@ -1,0 +1,62 @@
+# The acoustic "vertical" of the reusable terminal agent.
+#   generic engine  → ConfigMap "agent-shell"    (src/agent_shell.py — shared by every vertical)
+#   this vertical   → env below + ConfigMap "acoustic-agent" (the system prompt)
+# To make another vertical: copy this file, change AGENT_NAME / SYSTEM_PROMPT_FILE / TOOL_SERVERS / nodePort.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: acoustic-chat
+  namespace: acoustic
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: acoustic-chat }
+  template:
+    metadata:
+      labels: { app: acoustic-chat }
+    spec:
+      containers:
+        - name: chat
+          image: sachin-jetson.local:30500/acoustic-tools:latest   # reuse the tools image from the registry
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              if [ ! -x /tmp/ttyd ]; then
+                echo "fetching ttyd (aarch64)…"
+                python -c "import urllib.request;urllib.request.urlretrieve('https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.aarch64','/tmp/ttyd')"
+                chmod +x /tmp/ttyd
+              fi
+              exec /tmp/ttyd -W -p 7681 \
+                -t fontSize=15 \
+                -t 'theme={"background":"#0c0d13","foreground":"#e9eaf2"}' \
+                python -u /app/shell/agent_shell.py
+          env:
+            - { name: AGENT_NAME,        value: "Acoustic Analyzer" }
+            - { name: AGENT_SUB,         value: "local edge-AI · qwen2.5:3b · jetson / k3s" }
+            - { name: MODEL,             value: "qwen2.5:3b" }
+            - { name: OLLAMA_HOST,       value: "http://ollama.acoustic:11434" }
+            - { name: TOOL_SERVERS,      value: "http://acoustic-tools.acoustic:8000" }
+            - { name: SYSTEM_PROMPT_FILE, value: "/app/config/system.prompt" }
+            - { name: SUGGESTIONS_FILE,   value: "/app/config/suggestions" }
+          volumeMounts:
+            - { name: shell,  mountPath: /app/shell }    # generic engine
+            - { name: config, mountPath: /app/config }   # this vertical's prompt
+      volumes:
+        - name: shell
+          configMap: { name: agent-shell }
+        - name: config
+          configMap: { name: acoustic-agent }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: acoustic-chat
+  namespace: acoustic
+spec:
+  type: NodePort
+  selector: { app: acoustic-chat }
+  ports:
+    - port: 7681
+      targetPort: 7681
+      nodePort: 30088          # browser terminal at http://sachin-jetson.local:30088
