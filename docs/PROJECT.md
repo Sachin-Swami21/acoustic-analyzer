@@ -121,9 +121,13 @@ plus an 8-step solder checklist, print-friendly. ASCII version below.
 - **Anti-alias RC:** series **R = 1 kΩ**, shunt **C = 10 nF** to ground →
   cutoff `fc = 1/(2πRC) ≈ 16 kHz`, safely under the 22.05 kHz Nyquist limit at 44.1 kSPS.
   Want it nearer 20 kHz? Use R = 820 Ω or C = 8.2 nF.
-- **Jack:** **Tip = signal**, **Sleeve = ground** (mono). Many MAX9814 breakouts (e.g.
-  Adafruit) already have the electret mic soldered on — if so, skip task-1's mic capsule
-  and just do headers + filter + jack.
+- **Jack:** **Tip = signal**, **Sleeve = ground**, **Ring = leave floating** (mono source). Many
+  MAX9814 breakouts (e.g. Adafruit) already have the electret mic soldered on — if so, skip task-1's
+  mic capsule and just do headers + filter + jack.
+
+> 🔧 **At the bench?** Pinouts, how to socket/solder the module, a pre-power multimeter check, and a
+> full symptom→fix table (silence, hum, clipping, combo-jack trap…) are in
+> **[HARDWARE-BENCH.md](HARDWARE-BENCH.md)**.
 
 ### Why each component?
 

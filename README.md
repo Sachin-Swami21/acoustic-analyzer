@@ -135,6 +135,7 @@ OS-by-OS instructions (including the Windows/WSL caveats) are in
 | Doc | Contents |
 |-----|----------|
 | [docs/PROJECT.md](docs/PROJECT.md) | Full design, soldering, BOM, what to ask it, roadmap, future ideas |
+| [docs/HARDWARE-BENCH.md](docs/HARDWARE-BENCH.md) | Bench companion: pinouts, soldering how-to, symptom→fix troubleshooting |
 | [docs/TEST-HARDWARE.md](docs/TEST-HARDWARE.md) | Test the soldered board on a Mac or Windows PC (no Jetson) |
 | [docs/JETSON-SETUP.md](docs/JETSON-SETUP.md) | Bootstrap the Jetson Orin Nano (Apple-Silicon-friendly) |
 | [docs/DEPLOY-K3S.md](docs/DEPLOY-K3S.md) | Deploy the stack on k3s (Ollama + tool service + terminal UI, on NVMe) |
