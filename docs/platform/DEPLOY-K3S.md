@@ -12,7 +12,7 @@ Ships three pods (namespace `acoustic`):
 | **acoustic-chat** | reuses the built image | reusable agent engine (`src/agent_shell.py`) + this vertical's prompt, served as a **ttyd web terminal** — NodePort `:30088` |
 
 The front-end is a **terminal UI**, not a web app: open `http://<jetson>:30088` in a browser and
-you get the agent's REPL. Manifests: [`deploy/k8s/`](../deploy/k8s/).
+you get the agent's REPL. Manifests: [`deploy/k8s/`](../../deploy/k8s/).
 
 > **Why k3s here:** lightweight, official arm64, ideal for a single edge node. It uses
 > **containerd**, not Docker — which changes how the local image gets in (step 4).
@@ -76,7 +76,7 @@ The Ollama pod selects the GPU with `runtimeClassName: nvidia` + `NVIDIA_VISIBLE
 (already in the manifest). No device-plugin needed — the Jetson iGPU is shared, not a schedulable
 discrete GPU.
 
-> If Ollama ends up on CPU (slow), switch the image in [`ollama.yaml`](../deploy/k8s/ollama.yaml)
+> If Ollama ends up on CPU (slow), switch the image in [`ollama.yaml`](../../deploy/k8s/ollama.yaml)
 > to **`dustynv/ollama:latest`** — a Jetson-optimized build — and re-apply.
 
 ---
@@ -127,7 +127,7 @@ NVMe it lands there automatically.
 
 The everyday loop is `build → push → restart`, all via `kubectl`/`docker`, **no sudo**. It's
 powered by a private registry running *in the cluster* on the NVMe
-([`deploy/registry/registry.yaml`](../deploy/registry/registry.yaml) — its own `registry` namespace — pushed/pulled at `sachin-jetson.local:30500`).
+([`deploy/registry/registry.yaml`](../../deploy/registry/registry.yaml) — its own `registry` namespace — pushed/pulled at `sachin-jetson.local:30500`).
 Your Mac and the Jetson are both **arm64**, so a Mac build runs on the Jetson as-is.
 
 ### One-time setup
@@ -147,7 +147,7 @@ Your Mac and the Jetson are both **arm64**, so a Mac build runs on the Jetson as
 3. **Let Docker push over HTTP** — on the Mac, Docker Desktop → Settings → Docker Engine, add:
    `"insecure-registries": ["sachin-jetson.local:30500"]` → Apply & Restart.
 
-### The everyday loop (sudo-free, scriptable — see the [`Makefile`](../Makefile))
+### The everyday loop (sudo-free, scriptable — see the [`Makefile`](../../Makefile))
 ```bash
 make deploy       # docker build → docker push → kubectl rollout restart (tools + chat)
 make restart      # just re-pull + restart (no rebuild)
@@ -215,7 +215,7 @@ The front-end is a **web terminal** (ttyd) — no app, no login, no tool-wiring:
 ## 8 · When the mic is wired (later)
 
 1. Plug in the USB audio adapter; confirm on the host: `arecord -l`.
-2. In [`acoustic-tools.yaml`](../deploy/k8s/acoustic-tools.yaml): uncomment the
+2. In [`acoustic-tools.yaml`](../../deploy/k8s/acoustic-tools.yaml): uncomment the
    `securityContext.privileged`, the `/dev/snd` volume + mount, and set `ACOUSTIC_DEMO` to `"0"`.
 3. `kubectl apply -f deploy/k8s/acoustic-tools.yaml`.
 

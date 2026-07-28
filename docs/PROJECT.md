@@ -7,7 +7,7 @@ soldering + signal-processing + local-LLM build, with a Jetson doing the compute
 > **hardware (soldering the analog front-end)**, **edge computing (Jetson)**, and
 > **AI (a local LLM + chat UI)**.
 
-📐 **Diagram:** [`acoustic-analyzer.drawio`](acoustic-analyzer.drawio) — open in
+📐 **Diagram:** [`acoustic-analyzer.drawio`](architecture/acoustic-analyzer.drawio) — open in
 [draw.io](https://app.diagrams.net) or the VS Code *Draw.io Integration* extension.
 Page 1 = system architecture; Page 2 = options considered.
 
@@ -96,7 +96,7 @@ shorts, continuity-checking with a multimeter).
 
 ### Circuit / wiring diagram
 
-📐 **Visual solder map:** [`acoustic-wiring.svg`](acoustic-wiring.svg) — pin-level connections
+📐 **Visual solder map:** [`acoustic-wiring.svg`](mic-frontend/acoustic-wiring.svg) — pin-level connections
 plus an 8-step solder checklist, print-friendly. ASCII version below.
 
 
@@ -127,7 +127,7 @@ plus an 8-step solder checklist, print-friendly. ASCII version below.
 
 > 🔧 **At the bench?** Pinouts, how to socket/solder the module, a pre-power multimeter check, and a
 > full symptom→fix table (silence, hum, clipping, combo-jack trap…) are in
-> **[HARDWARE-BENCH.md](HARDWARE-BENCH.md)**.
+> **[HARDWARE-BENCH.md](mic-frontend/HARDWARE-BENCH.md)**.
 
 ### Why each component?
 
@@ -249,7 +249,7 @@ On the **Jetson later**, skip #10 — power from the Jetson's **5 V pin** on the
 
 ## Software stack (all local, all free)
 
-- **DSP:** numpy · scipy · matplotlib · sounddevice (see [`requirements.txt`](requirements.txt))
+- **DSP:** numpy · scipy · matplotlib · sounddevice (see [`requirements.txt`](../requirements.txt))
 - **LLM runtime:** [Ollama](https://ollama.com) (GPU-accelerated on the Jetson)
 - **Model:** `qwen2.5:3b` — chosen for strong **tool/function-calling**
   (drop to `llama3.2:1b` / `qwen2.5:1.5b` on a 4 GB board)
@@ -258,7 +258,7 @@ On the **Jetson later**, skip #10 — power from the Jetson's **5 V pin** on the
   — config + OpenAPI tool auto-discovery — served over the LAN as a
   [ttyd](https://github.com/tsl0922/ttyd) web terminal (open a URL, get the agent; no web app).
   Acoustic is just the first *vertical* ([`deploy/agents/`](../deploy/agents/))
-- **Orchestration:** [k3s](https://k3s.io) on the Jetson — see [DEPLOY-K3S.md](DEPLOY-K3S.md)
+- **Orchestration:** [k3s](https://k3s.io) on the Jetson — see [DEPLOY-K3S.md](platform/DEPLOY-K3S.md)
 
 ---
 
@@ -285,7 +285,7 @@ running as pods on k3s. The only thing standing between demo mode and live sound
 
 **Deployed on the Jetson (k3s):** the full stack runs as pods — Ollama (GPU), the DSP tool
 service, and the agent as a **terminal UI** — all on the NVMe. Open a browser to
-`http://<jetson>:30088` and chat. Full runbook → **[DEPLOY-K3S.md](DEPLOY-K3S.md)**. Currently in
+`http://<jetson>:30088` and chat. Full runbook → **[DEPLOY-K3S.md](platform/DEPLOY-K3S.md)**. Currently in
 **demo mode** (synthetic 60 Hz hum) until the mic is soldered.
 
 **Local dev** (Mac/PC, built-in mic) — the same code, no cluster:

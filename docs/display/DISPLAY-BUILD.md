@@ -27,7 +27,7 @@ checklist, print-friendly. ASCII version below.
 
 ## 1 · The data it reacts to (no new DSP)
 
-`features.analyze()` in [src/features.py](../src/features.py) already returns everything both
+`features.analyze()` in [src/features.py](../../src/features.py) already returns everything both
 displays need. You render its output — you don't add signal processing.
 
 | Display element | Field from `analyze()` | Notes |
@@ -255,6 +255,6 @@ frame — no changes to the DSP or the LLM path.
 ---
 
 ## See also
-- **[PROJECT.md](PROJECT.md)** — the analyzer, the mic front-end BOM, why each part
-- **[HARDWARE-BENCH.md](HARDWARE-BENCH.md)** — soldering technique, socket-don't-cook, symptom→fix
-- **[DEPLOY-K3S.md](DEPLOY-K3S.md)** — the `/dev/*` passthrough & `make restart` bits for the Jetson
+- **[PROJECT.md](../PROJECT.md)** — the analyzer, the mic front-end BOM, why each part
+- **[HARDWARE-BENCH.md](../mic-frontend/HARDWARE-BENCH.md)** — soldering technique, socket-don't-cook, symptom→fix
+- **[DEPLOY-K3S.md](../platform/DEPLOY-K3S.md)** — the `/dev/*` passthrough & `make restart` bits for the Jetson

@@ -1,7 +1,7 @@
 # Hardware bench guide — wiring, soldering & troubleshooting
 
 The page to keep open while you build and bring up the analog front-end. Design rationale and the
-full BOM live in **[PROJECT.md](PROJECT.md)**; how to *test* a finished board on a Mac/PC is in
+full BOM live in **[PROJECT.md](../PROJECT.md)**; how to *test* a finished board on a Mac/PC is in
 **[TEST-HARDWARE.md](TEST-HARDWARE.md)**. This doc is the in-between: how to wire it, how to solder
 it, and what to do when it doesn't work.
 
@@ -55,6 +55,16 @@ wants — `_read_wav()` takes `data[:,0]` and `_record()` uses `channels=1`.
 > tip. A 3-pole TRS plug in a combo jack shorts the mic to ground → **records silence**. Your BOM
 > calls for a separate **pink 3-pole mic input**; if yours is a combo jack you need a **4-pole
 > TRRS** plug with the signal on the sleeve.
+
+> **Field note (combo jack — confirmed the hard way).** A **MOSWAG "USB-to-microphone" adapter**
+> turned out to be a 4-pole **combo jack** despite the name. Symptom: the board was verified good
+> (AC signal measured all the way to the plug tip) but `arecord` still captured only the ±20 noise
+> floor. **Backing the 3-pole plug out one notch** (partial insertion) aligned the tip with the
+> mic contact and the samples jumped to ±5000 — that's the proof it's a combo jack. **Permanent
+> fix:** use an adapter with a **separate pink 3-pole mic jack** — the **Sabrent AU-MMSA** (two
+> jacks, pink + green) is the reliable Linux/Jetson pick — or re-terminate your cable to a **4-pole
+> TRRS** plug with signal on the sleeve. When buying, insist on **two** 3.5 mm ports in the photos;
+> avoid any single-port "headset" adapter. Verify with `arecord -l` after plugging in.
 
 ---
 
@@ -125,7 +135,7 @@ Work top-down: confirm the OS sees the device first, then chase the signal.
 |---|---|
 | USB adapter not enumerated | Re-seat it; try another port; `lsusb` (Linux) / System Info (Mac) should list a USB audio device. It's the ADC — no adapter, no input. |
 | On the **Jetson**: no capture node | `ls /dev/snd` — you need a `pcmC?D?**c**` (`c` = capture). Onboard nodes are all `…p` (playback). The USB adapter adds the `c` node. |
-| Pod started before the adapter was plugged in | `make restart` — ALSA/PortAudio only enumerates at startup (see [DEPLOY-K3S.md](DEPLOY-K3S.md)). |
+| Pod started before the adapter was plugged in | `make restart` — ALSA/PortAudio only enumerates at startup (see [DEPLOY-K3S.md](../platform/DEPLOY-K3S.md)). |
 | Wrong device selected | `src/capture_test.py --list`, then pass `--device N`. |
 
 ### Device detected, but records **silence** (flat level meter)
@@ -139,6 +149,25 @@ This is the most common one — the OS sees the adapter, but no audio arrives.
 | Gain too low / mic dead | Confirm `GAIN`→VDD is 40 dB (not accidentally to GND); tap the mic capsule hard. |
 | Cold joint on OUT/tip path | Reflow the OUT, cap, R, and tip joints — dull/grainy = cold. |
 | macOS mic permission | Grant the terminal mic access when prompted (or System Settings → Privacy → Microphone). |
+
+### Is the mic module even producing signal? (isolate board vs adapter)
+Before blaming the adapter or the solder, **prove the module outputs audio.** Two meter checks at
+the MAX9814 **OUT** pin (probe **OUT → GND**):
+
+| Meter mode | Condition | Healthy reading | Bad reading → meaning |
+|---|---|---|---|
+| **DC volts** | powered, silent | **~1.2 V** (internal bias) | **0 V** = unpowered · **≈ VDD (rail)** = dead chip |
+| **AC volts** | powered, shout at mic | number **rises** from ~0 | **stays flat** = capsule/module not hearing sound |
+
+If OUT idles at ~1.2 V **and** the AC reading rises when you shout, the module is good. Now **trace
+the signal forward**: measure AC volts at the **plug-tip (signal) wire** while shouting. If it
+rises there too, the whole board is proven end-to-end and the fault is the **adapter/plug** — go to
+the combo-jack note in §1. This "follow the AC signal one node at a time" method beats guessing.
+
+> **Dead-module tell.** OUT stuck at the supply rail (**≈ VDD**) instead of ~1.2 V means the
+> MAX9814 is fried — almost always a **reverse-polarity moment** (VDD/GND swapped) while wiring
+> power. These chips die instantly and silently. Swap the module; **before powering the new one,
+> meter red→VDD and black→GND** to confirm polarity so you don't kill a second one.
 
 ### Sound comes through but it's **wrong**
 
@@ -169,6 +198,6 @@ picking up **mains hum louder than your test tone** — improve grounding/shield
 ---
 
 ## See also
-- **[PROJECT.md](PROJECT.md)** — wiring diagram, BOM, why each component
+- **[PROJECT.md](../PROJECT.md)** — wiring diagram, BOM, why each component
 - **[TEST-HARDWARE.md](TEST-HARDWARE.md)** — full test procedure on a Mac or Windows PC
-- **[DEPLOY-K3S.md](DEPLOY-K3S.md)** — bring-up on the Jetson (the `make restart` / `/dev/snd` bits)
+- **[DEPLOY-K3S.md](../platform/DEPLOY-K3S.md)** — bring-up on the Jetson (the `make restart` / `/dev/snd` bits)

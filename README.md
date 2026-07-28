@@ -8,7 +8,7 @@ Runs entirely on an NVIDIA Jetson — no cloud, and no raw audio ever leaves the
 
 </div>
 
-![Acoustic Analyzer architecture](docs/acoustic-analyzer.svg)
+![Acoustic Analyzer architecture](docs/architecture/acoustic-analyzer.svg)
 
 ---
 
@@ -115,7 +115,7 @@ PYTHONPATH=src AGENT_NAME="Acoustic Analyzer" \
 The front-end presents as a standard **USB microphone**, so you can verify your soldering on a
 **Mac or Windows PC** — plug in the USB audio adapter and run the capture tests. Clear,
 OS-by-OS instructions (including the Windows/WSL caveats) are in
-**[docs/TEST-HARDWARE.md](docs/TEST-HARDWARE.md)**.
+**[docs/mic-frontend/TEST-HARDWARE.md](docs/mic-frontend/TEST-HARDWARE.md)**.
 
 ## Repository layout
 
@@ -132,14 +132,18 @@ OS-by-OS instructions (including the Windows/WSL caveats) are in
 
 ## Documentation
 
+`docs/` is organized by project: **PROJECT.md** is the top-level hub, then a folder per build
+(`mic-frontend/`, `display/`), shared `platform/` docs, and `architecture/` diagrams.
+
 | Doc | Contents |
 |-----|----------|
 | [docs/PROJECT.md](docs/PROJECT.md) | Full design, soldering, BOM, what to ask it, roadmap, future ideas |
-| [docs/HARDWARE-BENCH.md](docs/HARDWARE-BENCH.md) | Bench companion: pinouts, soldering how-to, symptom→fix troubleshooting |
-| [docs/TEST-HARDWARE.md](docs/TEST-HARDWARE.md) | Test the soldered board on a Mac or Windows PC (no Jetson) |
-| [docs/JETSON-SETUP.md](docs/JETSON-SETUP.md) | Bootstrap the Jetson Orin Nano (Apple-Silicon-friendly) |
-| [docs/DEPLOY-K3S.md](docs/DEPLOY-K3S.md) | Deploy the stack on k3s (Ollama + tool service + terminal UI, on NVMe) |
-| [docs/acoustic-wiring.svg](docs/acoustic-wiring.svg) | Pin-level solder map + checklist |
+| **Mic front-end** — [HARDWARE-BENCH.md](docs/mic-frontend/HARDWARE-BENCH.md) | Bench companion: pinouts, soldering how-to, symptom→fix troubleshooting |
+| [docs/mic-frontend/TEST-HARDWARE.md](docs/mic-frontend/TEST-HARDWARE.md) | Test the soldered board on a Mac or Windows PC (no Jetson) |
+| [docs/mic-frontend/acoustic-wiring.svg](docs/mic-frontend/acoustic-wiring.svg) | Pin-level solder map + checklist |
+| **Display** — [DISPLAY-BUILD.md](docs/display/DISPLAY-BUILD.md) | Sound-reactive OLED + LED bar: schematic, BOM, current budget, bring-up |
+| **Platform** — [JETSON-SETUP.md](docs/platform/JETSON-SETUP.md) | Bootstrap the Jetson Orin Nano (Apple-Silicon-friendly) |
+| [docs/platform/DEPLOY-K3S.md](docs/platform/DEPLOY-K3S.md) | Deploy the stack on k3s (Ollama + tool service + terminal UI, on NVMe) |
 
 ## Troubleshooting
 
@@ -174,7 +178,7 @@ OS-by-OS instructions (including the Windows/WSL caveats) are in
 
 A ~$25 analog front-end you solder:
 **electret mic → MAX9814 preamp → anti-alias RC filter → 3.5 mm jack → USB audio adapter → Jetson.**
-The [wiring map](docs/acoustic-wiring.svg), bill of materials, and soldering steps are in
+The [wiring map](docs/mic-frontend/acoustic-wiring.svg), bill of materials, and soldering steps are in
 [docs/PROJECT.md](docs/PROJECT.md).
 
 ---

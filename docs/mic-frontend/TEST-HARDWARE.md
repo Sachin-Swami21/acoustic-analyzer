@@ -166,4 +166,4 @@ python3 -m venv .venv
 ---
 
 Once the board passes here, it will behave identically on the Jetson — the code is the same, you
-just pass `--device N` for the USB adapter. See [SETUP.md](SETUP.md) and [JETSON-SETUP.md](JETSON-SETUP.md).
+just pass `--device N` for the USB adapter. See [JETSON-SETUP.md](../platform/JETSON-SETUP.md).
